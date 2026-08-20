@@ -1,0 +1,11 @@
+[project]
+name = "remisiones_impulsa"
+version = "0.1.0"
+description = "Aplicación Móvil de Captura de Remisiones e Integración con Aspel SAE"
+dependencies = [
+    "flet>=0.80.0",
+    "reportlab>=4.0.0"
+]
+
+[tool.flet]
+main = "main_app.py"
