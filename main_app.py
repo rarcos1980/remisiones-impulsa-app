@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import db_local
 import pdf_generator
+import search_dialogs
 
 def main(page: ft.Page):
     page.title = "MCR IMPULSO - Control de Remisiones Móviles"
@@ -22,6 +23,19 @@ def main(page: ft.Page):
     txt_cliente = ft.TextField(label="Cliente", hint_text="Nombre del Cliente o Clínica", expand=True)
     txt_direccion = ft.TextField(label="Dirección Cliente", expand=True)
     txt_vendedor = ft.TextField(label="Vendedor / Agente", value="DANIEL ALEJANDRO VIELMA TELLE", expand=True)
+
+    def abrir_buscador_cliente(e):
+        def cliente_seleccionado(clave, nombre, direccion):
+            txt_cliente.value = f"{nombre} ({clave})"
+            txt_direccion.value = direccion
+            page.update()
+        search_dialogs.search_clients_dialog(page, cliente_seleccionado)
+
+    btn_buscar_cliente = ft.IconButton(
+        icon=ft.Icons.SEARCH,
+        tooltip="Buscar Cliente en Catálogo",
+        on_click=abrir_buscador_cliente
+    )
 
     # Checkboxes Especialidades
     chk_electrofisiologia = ft.Checkbox(label="Electrofisiología y Mapeo", value=False)
@@ -49,6 +63,20 @@ def main(page: ft.Page):
     txt_part_descr = ft.TextField(label="Descripción del Producto", expand=True)
     txt_part_lote = ft.TextField(label="Lote", width=110)
     txt_part_precio = ft.TextField(label="Precio U.", value="0.00", width=100, keyboard_type=ft.KeyboardType.NUMBER)
+
+    def abrir_buscador_producto(e):
+        def producto_seleccionado(clave, descripcion, precio):
+            txt_part_cve.value = clave
+            txt_part_descr.value = descripcion
+            txt_part_precio.value = f"{precio:.2f}"
+            page.update()
+        search_dialogs.search_products_dialog(page, producto_seleccionado)
+
+    btn_buscar_producto = ft.IconButton(
+        icon=ft.Icons.SEARCH,
+        tooltip="Buscar Producto en Catálogo",
+        on_click=abrir_buscador_producto
+    )
 
     # Tabla de Partidas Táctil
     dt_partidas = ft.DataTable(
@@ -189,7 +217,7 @@ def main(page: ft.Page):
                 ft.Divider(),
                 
                 # DATOS CLIENTE
-                ft.Row([txt_cliente, txt_vendedor]),
+                ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor]),
                 txt_direccion,
                 ft.Divider(),
                 
@@ -215,6 +243,7 @@ def main(page: ft.Page):
                 ft.Row([
                     txt_part_cant,
                     txt_part_cve,
+                    btn_buscar_producto,
                     txt_part_alg,
                     txt_part_descr,
                     txt_part_lote,
