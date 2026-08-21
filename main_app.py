@@ -305,9 +305,9 @@ def main(page: ft.Page):
 
     page.navigation_bar = ft.NavigationBar(
         destinations=[
-            ft.NavigationDestination(icon=ft.Icons.RECEIPT_LONG, label="Remisión / Venta"),
-            ft.NavigationDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
-            ft.NavigationDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
+            ft.NavigationBarDestination(icon=ft.Icons.RECEIPT_LONG, label="Remisión / Venta"),
+            ft.NavigationBarDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
+            ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
         ],
         selected_index=0,
         on_change=cambiar_pestana
