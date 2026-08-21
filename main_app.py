@@ -6,7 +6,7 @@ import pdf_generator
 import search_dialogs
 
 def main(page: ft.Page):
-    page.title = "MCR IMPULSO - Control de Remisiones Móviles"
+    page.title = "PTOVENTAMOVIL - Punto de Venta Móvil"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 15
     page.scroll = ft.ScrollMode.AUTO

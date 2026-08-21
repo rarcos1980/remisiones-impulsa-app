@@ -1,4 +1,4 @@
-name: Build Android APK (Remisiones Impulsa)
+name: Build Android APK (PTOVENTAMOVIL)
 
 on:
   push:
@@ -37,10 +37,10 @@ jobs:
 
       - name: Build Android APK
         run: |
-          flet build apk --module-name main_app --no-compile-app --no-compile-packages --yes
+          flet build apk --project-name ptoventamovil --module-name main_app --no-compile-app --no-compile-packages --yes
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: remisiones-impulsa-apk
+          name: PTOVENTAMOVIL-apk
           path: build/apk/*.apk
