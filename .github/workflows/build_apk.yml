@@ -33,11 +33,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flet flet-cli reportlab
+          pip install flet reportlab
 
       - name: Build Android APK
         run: |
-          flet build apk --project-name ptoventamovil --module-name main_app --no-compile-app --no-compile-packages --yes
+          flet build apk --project-name ptoventamovil --module-name main_app --yes
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
