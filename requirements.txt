@@ -1,3 +1,4 @@
 flet-cli
 flet
 reportlab
+firebirdsql
