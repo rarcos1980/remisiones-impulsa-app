@@ -40,11 +40,11 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 1: CAPTURA DE REMISIONES / VENTAS
     # ══════════════════════════════════════════════════════════════════════
-    txt_folio = ft.TextField(label="Folio Remisión", value=f"REM-{datetime.now().strftime('%d%H%M')}", width=160, read_only=True)
-    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), width=130)
-    txt_cliente = ft.TextField(label="Cliente / Clínica", hint_text="Nombre del Cliente", expand=True)
-    txt_direccion = ft.TextField(label="Dirección Cliente", expand=True)
-    txt_vendedor = ft.TextField(label="Vendedor / Agente", value="DANIEL ALEJANDRO VIELMA TELLE", expand=True)
+    txt_folio = ft.TextField(label="Folio Remisión", value=f"REM-{datetime.now().strftime('%d%H%M')}", read_only=True, col={"md": 4, "xs": 12})
+    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"md": 4, "xs": 12})
+    txt_cliente = ft.TextField(label="Cliente / Clínica", hint_text="Nombre del Cliente", col={"md": 6, "xs": 10})
+    txt_direccion = ft.TextField(label="Dirección Cliente", col={"md": 12, "xs": 12})
+    txt_vendedor = ft.TextField(label="Vendedor / Agente", value="DANIEL ALEJANDRO VIELMA TELLE", col={"md": 5, "xs": 12})
 
     def abrir_buscador_cliente(e):
         def cliente_seleccionado(clave, nombre, direccion):
@@ -56,7 +56,8 @@ def main(page: ft.Page):
     btn_buscar_cliente = ft.IconButton(
         icon=ft.Icons.SEARCH,
         tooltip="Buscar Cliente en Catálogo",
-        on_click=abrir_buscador_cliente
+        on_click=abrir_buscador_cliente,
+        col={"md": 1, "xs": 2}
     )
 
     # Checkboxes Especialidades Médicas
@@ -67,11 +68,11 @@ def main(page: ft.Page):
     chk_neuromodulacion = ft.Checkbox(label="Neuromodulación", value=False)
 
     # Campos Expediente Médicos
-    txt_paciente = ft.TextField(label="Paciente", expand=True)
-    txt_doctor = ft.TextField(label="Doctor", expand=True)
-    txt_episodio = ft.TextField(label="Episodio", width=140)
-    txt_aseguradora = ft.TextField(label="Aseguradora", width=180)
-    txt_diagnostico = ft.TextField(label="Diagnóstico", expand=True)
+    txt_paciente = ft.TextField(label="Paciente", col={"md": 6, "xs": 12})
+    txt_doctor = ft.TextField(label="Doctor", col={"md": 6, "xs": 12})
+    txt_episodio = ft.TextField(label="Episodio", col={"md": 4, "xs": 12})
+    txt_aseguradora = ft.TextField(label="Aseguradora", col={"md": 4, "xs": 12})
+    txt_diagnostico = ft.TextField(label="Diagnóstico", col={"md": 4, "xs": 12})
 
     # Totales UI
     lbl_subtotal = ft.Text(value="$0.00", size=16, weight=ft.FontWeight.BOLD)
@@ -79,12 +80,12 @@ def main(page: ft.Page):
     lbl_total = ft.Text(value="$0.00", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
 
     # Formulario Agregar Partida
-    txt_part_cant = ft.TextField(label="Cant.", value="1", width=70, keyboard_type=ft.KeyboardType.NUMBER)
-    txt_part_cve = ft.TextField(label="Cve. Prod", width=110)
-    txt_part_alg = ft.TextField(label="ALG", width=70)
-    txt_part_descr = ft.TextField(label="Descripción del Producto", expand=True)
-    txt_part_lote = ft.TextField(label="Lote", width=110)
-    txt_part_precio = ft.TextField(label="Precio U.", value="0.00", width=100, keyboard_type=ft.KeyboardType.NUMBER)
+    txt_part_cant = ft.TextField(label="Cant.", value="1", keyboard_type=ft.KeyboardType.NUMBER, col={"md": 1, "xs": 4})
+    txt_part_cve = ft.TextField(label="Cve. Prod", col={"md": 2, "xs": 6})
+    txt_part_alg = ft.TextField(label="ALG", col={"md": 1, "xs": 3})
+    txt_part_descr = ft.TextField(label="Descripción del Producto", col={"md": 4, "xs": 9})
+    txt_part_lote = ft.TextField(label="Lote", col={"md": 2, "xs": 4})
+    txt_part_precio = ft.TextField(label="Precio U.", value="0.00", keyboard_type=ft.KeyboardType.NUMBER, col={"md": 2, "xs": 4})
 
     def abrir_buscador_producto(e):
         def producto_seleccionado(clave, descripcion, precio):
@@ -97,7 +98,8 @@ def main(page: ft.Page):
     btn_buscar_producto = ft.IconButton(
         icon=ft.Icons.SEARCH,
         tooltip="Buscar Producto en Catálogo",
-        on_click=abrir_buscador_producto
+        on_click=abrir_buscador_producto,
+        col={"md": 1, "xs": 2}
     )
 
     dt_partidas = ft.DataTable(
@@ -231,23 +233,26 @@ def main(page: ft.Page):
         content=ft.Column([
             ft.Row([
                 ft.Text("REMISIONES Y VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                btn_sync_sae,
-                txt_folio,
-                txt_fecha
-            ], wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                btn_sync_sae
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.ResponsiveRow([txt_folio, txt_fecha]),
             ft.Divider(),
-            ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor], wrap=True),
-            txt_direccion,
+            ft.ResponsiveRow([txt_cliente, btn_buscar_cliente, txt_vendedor]),
+            ft.ResponsiveRow([txt_direccion]),
             ft.Divider(),
             ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
             ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
             ft.Divider(),
             ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
-            ft.Row([txt_paciente, txt_doctor], wrap=True),
-            ft.Row([txt_episodio, txt_aseguradora, txt_diagnostico], wrap=True),
+            ft.ResponsiveRow([txt_paciente, txt_doctor]),
+            ft.ResponsiveRow([txt_episodio, txt_aseguradora, txt_diagnostico]),
             ft.Divider(),
             ft.Text("Agregar Producto / Partida:", weight=ft.FontWeight.BOLD),
-            ft.Row([txt_part_cant, txt_part_cve, btn_buscar_producto, txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, ft.Button("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click)], wrap=True),
+            ft.ResponsiveRow([
+                txt_part_cant, txt_part_cve, btn_buscar_producto, 
+                txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, 
+                ft.Container(ft.Button("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click), col={"md": 2, "xs": 12})
+            ]),
             ft.Row([dt_partidas], scroll=ft.ScrollMode.ALWAYS),
             ft.Divider(),
             ft.Row([
@@ -362,11 +367,11 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     cfg_actual = sae_connector.load_config()
     
-    txt_cfg_host = ft.TextField(label="Servidor / Host (IP o localhost)", value=cfg_actual.get('host', 'localhost'), expand=True)
-    txt_cfg_database = ft.TextField(label="Ruta Base de Datos Firebird (.FDB)", value=cfg_actual.get('database', ''), expand=True)
-    txt_cfg_empresa = ft.TextField(label="No. Empresa (ej: 01, 07)", value=cfg_actual.get('empresa', '01'), width=140)
-    txt_cfg_user = ft.TextField(label="Usuario Firebird", value=cfg_actual.get('user', 'SYSDBA'), width=160)
-    txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, width=180)
+    txt_cfg_host = ft.TextField(label="Servidor / Host (IP o localhost)", value=cfg_actual.get('host', 'localhost'), col={"md": 8, "xs": 12})
+    txt_cfg_database = ft.TextField(label="Ruta Base de Datos Firebird (.FDB)", value=cfg_actual.get('database', ''), col={"md": 12, "xs": 12})
+    txt_cfg_empresa = ft.TextField(label="No. Empresa (ej: 01, 07)", value=cfg_actual.get('empresa', '01'), col={"md": 4, "xs": 12})
+    txt_cfg_user = ft.TextField(label="Usuario Firebird", value=cfg_actual.get('user', 'SYSDBA'), col={"md": 6, "xs": 12})
+    txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, col={"md": 6, "xs": 12})
 
     def guardar_config_click(e):
         nuevos_datos = {
@@ -397,9 +402,9 @@ def main(page: ft.Page):
             ft.Text("CONFIGURACIÓN CONEXIÓN CON ASPEL SAE", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
             ft.Text("Configure la ruta del servidor Firebird y la empresa para sincronización táctil:"),
             ft.Divider(),
-            ft.Row([txt_cfg_host, txt_cfg_empresa], wrap=True),
-            txt_cfg_database,
-            ft.Row([txt_cfg_user, txt_cfg_password], wrap=True),
+            ft.ResponsiveRow([txt_cfg_host, txt_cfg_empresa]),
+            ft.ResponsiveRow([txt_cfg_database]),
+            ft.ResponsiveRow([txt_cfg_user, txt_cfg_password]),
             ft.Divider(),
             ft.Row([
                 ft.Button("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
@@ -443,4 +448,4 @@ def main(page: ft.Page):
     page.add(body_container)
 
 if __name__ == "__main__":
-    ft.run(target=main)
+    ft.run(main)
