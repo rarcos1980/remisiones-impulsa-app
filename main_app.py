@@ -165,7 +165,7 @@ def main(page: ft.Page):
                 ),
                 data=p,
                 bgcolor=ft.Colors.WHITE,
-                border=ft.border.all(1, ft.Colors.GREY_300),
+                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300), bottom=ft.BorderSide(1, ft.Colors.GREY_300), left=ft.BorderSide(1, ft.Colors.GREY_300), right=ft.BorderSide(1, ft.Colors.GREY_300)),
                 border_radius=8
             )
             lv_partidas.controls.append(tile)
