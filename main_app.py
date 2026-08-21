@@ -102,18 +102,7 @@ def main(page: ft.Page):
         col={"md": 1, "xs": 2}
     )
 
-    dt_partidas = ft.DataTable(
-        columns=[
-            ft.DataColumn(ft.Text("Cant.")),
-            ft.DataColumn(ft.Text("Clave")),
-            ft.DataColumn(ft.Text("ALG")),
-            ft.DataColumn(ft.Text("Descripción")),
-            ft.DataColumn(ft.Text("Lote")),
-            ft.DataColumn(ft.Text("Precio U.")),
-            ft.DataColumn(ft.Text("Total")),
-        ],
-        rows=[]
-    )
+    lv_partidas = ft.Column(spacing=5)
 
     def calcular_totales():
         subtotal = sum(p['total_partida'] for p in items_partidas)
@@ -152,19 +141,26 @@ def main(page: ft.Page):
             txt_part_lote.value = ""
             txt_part_precio.value = "0.00"
             
-            dt_partidas.rows.append(
-                ft.DataRow(
-                    cells=[
-                        ft.DataCell(ft.Text(f"{cant:.2f}")),
-                        ft.DataCell(ft.Text(p['cve_producto'])),
-                        ft.DataCell(ft.Text(p['alg'])),
-                        ft.DataCell(ft.Text(p['descripcion'])),
-                        ft.DataCell(ft.Text(p['lote'])),
-                        ft.DataCell(ft.Text(f"${pu:,.2f}")),
-                        ft.DataCell(ft.Text(f"${tot:,.2f}")),
-                    ]
-                )
+            def btn_eliminar_click(e, p_item=p):
+                items_partidas.remove(p_item)
+                for t in lv_partidas.controls[:]:
+                    if t.data == p_item:
+                        lv_partidas.controls.remove(t)
+                calcular_totales()
+
+            tile = ft.Container(
+                content=ft.ListTile(
+                    leading=ft.Icon(ft.Icons.SHOPPING_CART, color=ft.Colors.BLUE_500),
+                    title=ft.Text(f"{p['descripcion']} (Cve: {p['cve_producto']})", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(f"Cant: {cant:.2f} x ${pu:,.2f} = ${tot:,.2f} | Lote: {p['lote']}"),
+                    trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED, on_click=btn_eliminar_click)
+                ),
+                data=p,
+                bgcolor=ft.Colors.WHITE,
+                border=ft.border.all(1, ft.Colors.GREY_300),
+                border_radius=8
             )
+            lv_partidas.controls.append(tile)
             calcular_totales()
         except ValueError:
             page.open(ft.SnackBar(ft.Text("Valores numéricos inválidos en cantidad o precio")))
@@ -229,41 +225,75 @@ def main(page: ft.Page):
             page.overlay.append(ft.SnackBar(ft.Text(f"Error al procesar remisión: {str(ex)}"), open=True))
             page.update()
 
-    view_remisiones = ft.Container(
-        content=ft.Column([
+    # 1. Acordeón para Datos Generales
+    acordeon_cliente = ft.ExpansionTile(
+        title=ft.Text("1. Datos Generales y Expediente", weight=ft.FontWeight.BOLD, size=16),
+        subtitle=ft.Text("Cliente, Médico, Diagnóstico (Toca para expandir/minimizar)"),
+        initially_expanded=True,
+        controls=[
+            ft.Container(padding=10, content=ft.Column([
+                ft.ResponsiveRow([txt_folio, txt_fecha]),
+                ft.ResponsiveRow([txt_cliente, btn_buscar_cliente, txt_vendedor]),
+                ft.ResponsiveRow([txt_direccion]),
+                ft.Divider(),
+                ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
+                ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
+                ft.Divider(),
+                ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
+                ft.ResponsiveRow([txt_paciente, txt_doctor]),
+                ft.ResponsiveRow([txt_episodio, txt_aseguradora, txt_diagnostico])
+            ]))
+        ]
+    )
+
+    # 2. Body Principal Scrolleable
+    body = ft.Column(
+        controls=[
             ft.Row([
                 ft.Text("REMISIONES Y VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
                 btn_sync_sae
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            ft.ResponsiveRow([txt_folio, txt_fecha]),
+            acordeon_cliente,
             ft.Divider(),
-            ft.ResponsiveRow([txt_cliente, btn_buscar_cliente, txt_vendedor]),
-            ft.ResponsiveRow([txt_direccion]),
-            ft.Divider(),
-            ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
-            ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
-            ft.Divider(),
-            ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
-            ft.ResponsiveRow([txt_paciente, txt_doctor]),
-            ft.ResponsiveRow([txt_episodio, txt_aseguradora, txt_diagnostico]),
-            ft.Divider(),
-            ft.Text("Agregar Producto / Partida:", weight=ft.FontWeight.BOLD),
+            ft.Text("2. Buscador y Captura de Productos:", weight=ft.FontWeight.BOLD, size=16),
             ft.ResponsiveRow([
                 txt_part_cant, txt_part_cve, btn_buscar_producto, 
                 txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, 
                 ft.Container(ft.Button("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click), col={"md": 2, "xs": 12})
             ]),
-            ft.Row([dt_partidas], scroll=ft.ScrollMode.ALWAYS),
             ft.Divider(),
-            ft.Row([
-                ft.Column([
-                    ft.Row([ft.Text("Subtotal: "), lbl_subtotal]),
-                    ft.Row([ft.Text("IVA (16%): "), lbl_iva]),
-                    ft.Row([ft.Text("TOTAL: "), lbl_total]),
-                ]),
-                ft.Button("GUARDAR Y GENERAR PDF", icon=ft.Icons.PICTURE_AS_PDF, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), height=50, on_click=guardar_y_generar_pdf)
-            ], wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-        ], scroll=ft.ScrollMode.AUTO),
+            ft.Text("3. Carrito de Compras:", weight=ft.FontWeight.BOLD, size=16),
+            lv_partidas
+        ],
+        scroll=ft.ScrollMode.AUTO,
+        expand=True
+    )
+
+    # 3. Sticky Bottom Bar para Totales
+    barra_inferior = ft.Container(
+        content=ft.ResponsiveRow([
+            ft.Column([
+                ft.Row([ft.Text("Subtotal:", size=12, color=ft.Colors.GREY_600), lbl_subtotal]),
+                ft.Row([ft.Text("IVA (16%):", size=12, color=ft.Colors.GREY_600), lbl_iva])
+            ], col={"md": 3, "xs": 12}),
+            ft.Column([
+                ft.Text("TOTAL A COBRAR:", size=14, weight=ft.FontWeight.BOLD), lbl_total
+            ], col={"md": 4, "xs": 12}),
+            ft.Column([
+                ft.Button("GUARDAR Y COBRAR", icon=ft.Icons.CHECK_CIRCLE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), on_click=guardar_y_generar_pdf, height=50)
+            ], col={"md": 5, "xs": 12})
+        ]),
+        padding=10,
+        bgcolor=ft.Colors.GREY_100,
+        border_radius=8,
+        border=ft.border.all(1, ft.Colors.GREY_300)
+    )
+
+    view_remisiones = ft.Container(
+        content=ft.Column([
+            body,
+            barra_inferior
+        ]),
         padding=10,
         expand=True
     )
