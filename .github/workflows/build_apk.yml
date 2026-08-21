@@ -24,19 +24,19 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flet flet-cli reportlab firebirdsql
+          pip install flet flet-cli reportlab
 
       - name: Build Android APK
         run: |
-          flet build apk --module-name main_app --python-version 3.11 -v --yes
+          flet build apk --module-name main_app --python-version 3.12 -v --yes
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
