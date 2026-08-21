@@ -26,9 +26,9 @@ def main(page: ft.Page):
         dlg = ft.AlertDialog(
             title=ft.Row([ft.Icon(icon_type, color=color_type), ft.Text("Sincronizador SAE")]),
             content=ft.Text(msg),
-            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close(dlg))]
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.pop_dialog())]
         )
-        page.open(dlg)
+        page.show_dialog(dlg)
 
     btn_sync_sae = ft.ElevatedButton(
         "Sincronizar SAE",
@@ -308,7 +308,8 @@ def main(page: ft.Page):
             'charset': 'UTF8'
         }
         ok, msg = sae_connector.save_config(nuevos_datos)
-        page.open(ft.SnackBar(ft.Text(msg)))
+        page.overlay.append(ft.SnackBar(ft.Text(msg), open=True))
+        page.update()
 
     def probar_conexion_click(e):
         ok, msg = sae_connector.test_connection()
@@ -317,9 +318,9 @@ def main(page: ft.Page):
         dlg = ft.AlertDialog(
             title=ft.Row([ft.Icon(icon_t, color=color_t), ft.Text("Prueba de Conexión")]),
             content=ft.Text(msg),
-            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close(dlg))]
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.pop_dialog())]
         )
-        page.open(dlg)
+        page.show_dialog(dlg)
 
     view_ajustes = ft.Container(
         content=ft.Column([
