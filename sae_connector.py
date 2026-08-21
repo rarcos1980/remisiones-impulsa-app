@@ -89,7 +89,7 @@ def sync_catalogos_desde_sae():
                     direccion=excluded.direccion
             """, (clave, nombre, rfc, direccion))
 
-        # 2. Sync Productos
+        # 2. Sync Productos e Importar Precios
         cur_fb.execute(f"SELECT TRIM(CVE_ART), TRIM(DESCR), EXIST FROM {tbl_inve} WHERE STATUS = 'A'")
         productos_fb = cur_fb.fetchall()
         for p in productos_fb:
@@ -100,9 +100,27 @@ def sync_catalogos_desde_sae():
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(clave) DO UPDATE SET
                     descripcion=excluded.descripcion,
-                    precio=excluded.precio,
                     existencia=excluded.existencia
             """, (clave, descr, precio, exist))
+
+        # 2.1 Sync Lista de Precios (PRECIO_X_PROD)
+        tbl_precio = f"PRECIO_X_PROD{emp}"
+        try:
+            cur_fb.execute(f"SELECT TRIM(CVE_ART), CVE_PRECIO, PRECIO FROM {tbl_precio}")
+            precios_fb = cur_fb.fetchall()
+            for px in precios_fb:
+                cve_art, cve_precio, precio_val = px[0], int(px[1] or 1), float(px[2] or 0.0)
+                cur_sq.execute("""
+                    INSERT INTO precios_x_producto (cve_art, cve_precio, precio)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(cve_art, cve_precio) DO UPDATE SET precio=excluded.precio
+                """, (cve_art, cve_precio, precio_val))
+                
+                # Actualizar precio lista 1 en tabla de productos principal
+                if cve_precio == 1:
+                    cur_sq.execute("UPDATE productos SET precio = ? WHERE clave = ?", (precio_val, cve_art))
+        except Exception as ex_p:
+            print(f"Nota: No se pudo leer {tbl_precio}: {str(ex_p)}")
 
         # 3. Sync Vendedores
         cur_fb.execute(f"SELECT TRIM(CVE_VEND), TRIM(NOMBRE) FROM {tbl_vend} WHERE STATUS = 'A'")
@@ -118,7 +136,7 @@ def sync_catalogos_desde_sae():
         sqlite_conn.commit()
         fb_conn.close()
         sqlite_conn.close()
-        return True, f"Catálogos de Empresa {emp} actualizados desde SAE ({len(productos_fb)} productos, {len(clientes_fb)} clientes)."
+        return True, f"Catálogos de Empresa {emp} actualizados desde SAE ({len(productos_fb)} productos, {len(clientes_fb)} clientes, {len(vendedores_fb)} vendedores)."
     except Exception as e:
         msg = f"Error al conectar con SAE Firebird ({tbl_inve}): {str(e)}"
         return False, msg

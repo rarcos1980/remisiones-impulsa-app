@@ -15,7 +15,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Tabla de Clientes
+    # 1. Tabla de Clientes
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS clientes (
             clave TEXT PRIMARY KEY,
@@ -26,7 +26,7 @@ def init_db():
         )
     """)
     
-    # Tabla de Productos / Inventario
+    # 2. Tabla de Productos / Inventario
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS productos (
             clave TEXT PRIMARY KEY,
@@ -36,8 +36,18 @@ def init_db():
             linea TEXT
         )
     """)
+
+    # 3. Tabla de Precios por Producto (PRECIO_X_PROD)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS precios_x_producto (
+            cve_art TEXT,
+            cve_precio INTEGER,
+            precio REAL DEFAULT 0.0,
+            PRIMARY KEY (cve_art, cve_precio)
+        )
+    """)
     
-    # Tabla de Lotes por Producto
+    # 4. Tabla de Lotes por Producto
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS lotes (
             cve_art TEXT,
@@ -48,7 +58,7 @@ def init_db():
         )
     """)
 
-    # Tabla de Vendedores
+    # 5. Tabla de Vendedores
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS vendedores (
             clave TEXT PRIMARY KEY,
@@ -56,7 +66,7 @@ def init_db():
         )
     """)
     
-    # Tabla de Remisiones (Encabezado)
+    # 6. Tabla de Remisiones (Encabezado)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS remisiones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,7 +114,7 @@ def init_db():
         )
     """)
 
-    # Tabla de Partidas de Remisión
+    # 7. Tabla de Partidas de Remisión
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS remision_partidas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,6 +134,83 @@ def init_db():
     conn.commit()
     conn.close()
     print("Base de datos local SQLite inicializada correctamente.")
+
+def guardar_remision_local(datos_remision, partidas):
+    """
+    Guarda la remisión completa (Encabezado + Partidas) en la base SQLite local de la tablet.
+    Regresa el ID asignado y el folio.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        esp = datos_remision.get('especialidades', {})
+        cur.execute("""
+            INSERT INTO remisiones (
+                folio, fecha, cve_cliente, nombre_cliente, direccion_cliente,
+                cve_vendedor, nombre_vendedor, esp_electrofisiologia, esp_radiologia,
+                esp_cardiologia, esp_endovascular, esp_neuromodulacion,
+                nombre_paciente, nombre_doctor, episodio, aseguradora, diagnostico, agente,
+                subtotal, descuento_porcentaje, descuento_monto, iva_monto, total, total_letra,
+                fecha_pagare, monto_pagare, estatus_sync, fecha_creacion
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDIENTE', datetime('now', 'localtime'))
+        """, (
+            datos_remision.get('folio'),
+            datos_remision.get('fecha'),
+            datos_remision.get('cve_cliente', ''),
+            datos_remision.get('nombre_cliente', ''),
+            datos_remision.get('direccion_cliente', ''),
+            datos_remision.get('cve_vendedor', ''),
+            datos_remision.get('nombre_vendedor', ''),
+            1 if esp.get('electrofisiologia') else 0,
+            1 if esp.get('radiologia') else 0,
+            1 if esp.get('cardiologia') else 0,
+            1 if esp.get('endovascular') else 0,
+            1 if esp.get('neuromodulacion') else 0,
+            datos_remision.get('nombre_paciente', ''),
+            datos_remision.get('nombre_doctor', ''),
+            datos_remision.get('episodio', ''),
+            datos_remision.get('aseguradora', ''),
+            datos_remision.get('diagnostico', ''),
+            datos_remision.get('agente', ''),
+            datos_remision.get('subtotal', 0.0),
+            datos_remision.get('descuento_pct', 0.0),
+            datos_remision.get('descuento_monto', 0.0),
+            datos_remision.get('iva', 0.0),
+            datos_remision.get('total', 0.0),
+            datos_remision.get('total_letra', ''),
+            datos_remision.get('fecha_pagare', ''),
+            datos_remision.get('total', 0.0)
+        ))
+        
+        remision_id = cur.lastrowid
+        
+        # Insertar partidas
+        num_part = 1
+        for p in partidas:
+            cur.execute("""
+                INSERT INTO remision_partidas (
+                    remision_id, num_partida, cve_producto, alg, descripcion, lote, cantidad, precio_unitario, total_partida
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                remision_id,
+                num_part,
+                p.get('cve_producto', ''),
+                p.get('alg', ''),
+                p.get('descripcion', ''),
+                p.get('lote', ''),
+                p.get('cantidad', 1.0),
+                p.get('precio_unitario', 0.0),
+                p.get('total_partida', 0.0)
+            ))
+            num_part += 1
+            
+        conn.commit()
+        return True, remision_id, "Remisión guardada exitosamente en la base de datos local."
+    except Exception as e:
+        conn.rollback()
+        return False, None, f"Error al guardar remisión en SQLite: {str(e)}"
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     init_db()

@@ -211,16 +211,21 @@ def main(page: ft.Page):
         pdf_path = os.path.join(out_dir, f"{txt_folio.value}.pdf")
         
         try:
+            # 1. Guardar en SQLite local (para persistencia y sincronización posterior con SAE)
+            ok_db, rem_id, msg_db = db_local.guardar_remision_local(datos_remision, items_partidas)
+            
+            # 2. Generar PDF idéntico a remision.pdf
             pdf_generator.generar_pdf_remision(datos_remision, items_partidas, pdf_path)
-            page.dialog = ft.AlertDialog(
-                title=ft.Text("Remisión Generada"),
-                content=ft.Text(f"Se ha guardado y generado el PDF exitosamente:\n{pdf_path}"),
-                actions=[ft.TextButton("OK", on_click=lambda ev: page.close_dialog())]
+            
+            dlg = ft.AlertDialog(
+                title=ft.Text("Remisión Guardada y PDF Generado"),
+                content=ft.Text(f"La remisión fue registrada localmente en SQLite (ID: {rem_id}) y se generó el PDF:\n{pdf_path}"),
+                actions=[ft.TextButton("OK", on_click=lambda ev: page.pop_dialog())]
             )
-            page.dialog.open = True
-            page.update()
+            page.show_dialog(dlg)
         except Exception as ex:
-            page.open(ft.SnackBar(ft.Text(f"Error al generar el PDF: {str(ex)}")))
+            page.overlay.append(ft.SnackBar(ft.Text(f"Error al procesar remisión: {str(ex)}"), open=True))
+            page.update()
 
     view_remisiones = ft.Container(
         content=ft.Column([
