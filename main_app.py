@@ -60,19 +60,7 @@ def main(page: ft.Page):
         col={"md": 1, "xs": 2}
     )
 
-    # Checkboxes Especialidades Médicas
-    chk_electrofisiologia = ft.Checkbox(label="Electrofisiología", value=False)
-    chk_radiologia = ft.Checkbox(label="Radiología", value=False)
-    chk_cardiologia = ft.Checkbox(label="Cardiología", value=False)
-    chk_endovascular = ft.Checkbox(label="Endovascular", value=False)
-    chk_neuromodulacion = ft.Checkbox(label="Neuromodulación", value=False)
-
-    # Campos Expediente Médicos
-    txt_paciente = ft.TextField(label="Paciente", col={"md": 6, "xs": 12})
-    txt_doctor = ft.TextField(label="Doctor", col={"md": 6, "xs": 12})
-    txt_episodio = ft.TextField(label="Episodio", col={"md": 4, "xs": 12})
-    txt_aseguradora = ft.TextField(label="Aseguradora", col={"md": 4, "xs": 12})
-    txt_diagnostico = ft.TextField(label="Diagnóstico", col={"md": 4, "xs": 12})
+    # Campos eliminados a petición del usuario (Paciente, Doctor, etc.)
 
     # Totales UI
     lbl_subtotal = ft.Text(value="$0.00", size=16, weight=ft.FontWeight.BOLD)
@@ -148,11 +136,31 @@ def main(page: ft.Page):
                         lv_partidas.controls.remove(t)
                 calcular_totales()
 
+            # TextFields editables en el carrito
+            txt_qty = ft.TextField(value=str(cant), label="Cant.", width=80, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
+            txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=100, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
+            lbl_tot = ft.Text(f"${tot:,.2f}", weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700)
+
+            def update_item_totals(e):
+                try:
+                    new_cant = float(txt_qty.value or 0)
+                    new_pu = float(txt_prc.value or 0)
+                    p['cantidad'] = new_cant
+                    p['precio_unitario'] = new_pu
+                    p['total_partida'] = new_cant * new_pu
+                    lbl_tot.value = f"${p['total_partida']:,.2f}"
+                    calcular_totales()
+                except ValueError:
+                    pass
+
+            txt_qty.on_change = update_item_totals
+            txt_prc.on_change = update_item_totals
+
             tile = ft.Container(
                 content=ft.ListTile(
                     leading=ft.Icon(ft.Icons.SHOPPING_CART, color=ft.Colors.BLUE_500),
                     title=ft.Text(f"{p['descripcion']} (Cve: {p['cve_producto']})", weight=ft.FontWeight.BOLD),
-                    subtitle=ft.Text(f"Cant: {cant:.2f} x ${pu:,.2f} = ${tot:,.2f} | Lote: {p['lote']}"),
+                    subtitle=ft.Row([txt_qty, txt_prc, ft.Text("Total:"), lbl_tot, ft.Text(f"Lote: {p['lote']}")], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                     trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED, on_click=btn_eliminar_click)
                 ),
                 data=p,
@@ -184,11 +192,11 @@ def main(page: ft.Page):
             'direccion_cliente': txt_direccion.value,
             'nombre_vendedor': txt_vendedor.value,
             'especialidades': {
-                'electrofisiologia': chk_electrofisiologia.value,
-                'radiologia': chk_radiologia.value,
-                'cardiologia': chk_cardiologia.value,
-                'endovascular': chk_endovascular.value,
-                'neuromodulacion': chk_neuromodulacion.value
+                'electrofisiologia': False,
+                'radiologia': False,
+                'cardiologia': False,
+                'endovascular': False,
+                'neuromodulacion': False
             },
             'subtotal': subtotal,
             'descuento_pct': 0.0,
@@ -196,11 +204,11 @@ def main(page: ft.Page):
             'iva': iva,
             'total': total,
             'total_letra': f"{total:,.2f} PESOS M.N.",
-            'nombre_paciente': txt_paciente.value,
-            'nombre_doctor': txt_doctor.value,
-            'episodio': txt_episodio.value,
-            'aseguradora': txt_aseguradora.value,
-            'diagnostico': txt_diagnostico.value,
+            'nombre_paciente': "",
+            'nombre_doctor': "",
+            'episodio': "",
+            'aseguradora': "",
+            'diagnostico': "",
             'agente': txt_vendedor.value,
             'fecha_pagare': txt_fecha.value
         }
@@ -227,21 +235,13 @@ def main(page: ft.Page):
 
     # 1. Acordeón para Datos Generales
     acordeon_cliente = ft.ExpansionTile(
-        title=ft.Text("1. Datos Generales y Expediente", weight=ft.FontWeight.BOLD, size=16),
-        subtitle=ft.Text("Cliente, Médico, Diagnóstico (Toca para expandir/minimizar)"),
+        title=ft.Text("1. Datos Generales de la Remisión", weight=ft.FontWeight.BOLD, size=16),
         initially_expanded=True,
         controls=[
             ft.Container(padding=10, content=ft.Column([
                 ft.ResponsiveRow([txt_folio, txt_fecha]),
                 ft.ResponsiveRow([txt_cliente, btn_buscar_cliente, txt_vendedor]),
-                ft.ResponsiveRow([txt_direccion]),
-                ft.Divider(),
-                ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
-                ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
-                ft.Divider(),
-                ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
-                ft.ResponsiveRow([txt_paciente, txt_doctor]),
-                ft.ResponsiveRow([txt_episodio, txt_aseguradora, txt_diagnostico])
+                ft.ResponsiveRow([txt_direccion])
             ]))
         ]
     )
