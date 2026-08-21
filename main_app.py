@@ -4,11 +4,12 @@ from datetime import datetime
 import db_local
 import pdf_generator
 import search_dialogs
+import sae_connector
 
 def main(page: ft.Page):
     page.title = "PTOVENTAMOVIL - Punto de Venta Móvil"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 15
+    page.padding = 10
     page.scroll = ft.ScrollMode.AUTO
     
     # Inicializar BD local
@@ -17,10 +18,32 @@ def main(page: ft.Page):
     # Variables de Estado de la Remisión
     items_partidas = []
     
-    # Campos de Entrada
-    txt_folio = ft.TextField(label="Folio Remisión", value=f"REM-{datetime.now().strftime('%d%H%M')}", width=180, read_only=True)
-    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), width=150)
-    txt_cliente = ft.TextField(label="Cliente", hint_text="Nombre del Cliente o Clínica", expand=True)
+    # Botón de Sincronización SAE
+    def ejecutar_sincronizacion(e):
+        ok, msg = sae_connector.sync_catalogos_desde_sae()
+        icon_type = ft.Icons.CHECK_CIRCLE if ok else ft.Icons.ERROR
+        color_type = ft.Colors.GREEN if ok else ft.Colors.RED
+        page.dialog = ft.AlertDialog(
+            title=ft.Row([ft.Icon(icon_type, color=color_type), ft.Text("Sincronizador SAE")]),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close_dialog())]
+        )
+        page.dialog.open = True
+        page.update()
+
+    btn_sync_sae = ft.ElevatedButton(
+        "Sincronizar SAE",
+        icon=ft.Icons.SYNC,
+        style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.BLUE_800),
+        on_click=ejecutar_sincronizacion
+    )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # VISTA 1: CAPTURA DE REMISIONES / VENTAS
+    # ══════════════════════════════════════════════════════════════════════
+    txt_folio = ft.TextField(label="Folio Remisión", value=f"REM-{datetime.now().strftime('%d%H%M')}", width=160, read_only=True)
+    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), width=130)
+    txt_cliente = ft.TextField(label="Cliente / Clínica", hint_text="Nombre del Cliente", expand=True)
     txt_direccion = ft.TextField(label="Dirección Cliente", expand=True)
     txt_vendedor = ft.TextField(label="Vendedor / Agente", value="DANIEL ALEJANDRO VIELMA TELLE", expand=True)
 
@@ -37,18 +60,18 @@ def main(page: ft.Page):
         on_click=abrir_buscador_cliente
     )
 
-    # Checkboxes Especialidades
-    chk_electrofisiologia = ft.Checkbox(label="Electrofisiología y Mapeo", value=False)
-    chk_radiologia = ft.Checkbox(label="Radiología Intervencionista", value=False)
-    chk_cardiologia = ft.Checkbox(label="Cardiología Intervencionista", value=False)
-    chk_endovascular = ft.Checkbox(label="Endovascular Periférico", value=False)
+    # Checkboxes Especialidades Médicas
+    chk_electrofisiologia = ft.Checkbox(label="Electrofisiología", value=False)
+    chk_radiologia = ft.Checkbox(label="Radiología", value=False)
+    chk_cardiologia = ft.Checkbox(label="Cardiología", value=False)
+    chk_endovascular = ft.Checkbox(label="Endovascular", value=False)
     chk_neuromodulacion = ft.Checkbox(label="Neuromodulación", value=False)
 
     # Campos Expediente Médicos
-    txt_paciente = ft.TextField(label="Nombre del Paciente", expand=True)
-    txt_doctor = ft.TextField(label="Nombre del Doctor", expand=True)
-    txt_episodio = ft.TextField(label="Episodio", width=180)
-    txt_aseguradora = ft.TextField(label="Aseguradora", width=220)
+    txt_paciente = ft.TextField(label="Paciente", expand=True)
+    txt_doctor = ft.TextField(label="Doctor", expand=True)
+    txt_episodio = ft.TextField(label="Episodio", width=140)
+    txt_aseguradora = ft.TextField(label="Aseguradora", width=180)
     txt_diagnostico = ft.TextField(label="Diagnóstico", expand=True)
 
     # Totales UI
@@ -78,7 +101,6 @@ def main(page: ft.Page):
         on_click=abrir_buscador_producto
     )
 
-    # Tabla de Partidas Táctil
     dt_partidas = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("Cant.")),
@@ -122,7 +144,6 @@ def main(page: ft.Page):
             }
             items_partidas.append(p)
             
-            # Limpiar entradas de partida
             txt_part_cant.value = "1"
             txt_part_cve.value = ""
             txt_part_alg.value = ""
@@ -130,7 +151,6 @@ def main(page: ft.Page):
             txt_part_lote.value = ""
             txt_part_precio.value = "0.00"
             
-            # Renderizar fila en DataTable
             dt_partidas.rows.append(
                 ft.DataRow(
                     cells=[
@@ -188,7 +208,6 @@ def main(page: ft.Page):
             'fecha_pagare': txt_fecha.value
         }
 
-        # Guardar PDF en carpeta de salida
         out_dir = os.path.dirname(__file__)
         pdf_path = os.path.join(out_dir, f"{txt_folio.value}.pdf")
         
@@ -197,83 +216,104 @@ def main(page: ft.Page):
             page.dialog = ft.AlertDialog(
                 title=ft.Text("Remisión Generada"),
                 content=ft.Text(f"Se ha guardado y generado el PDF exitosamente:\n{pdf_path}"),
-                actions=[ft.TextButton("OK", on_click=lambda e: page.close_dialog())]
+                actions=[ft.TextButton("OK", on_click=lambda ev: page.close_dialog())]
             )
             page.dialog.open = True
             page.update()
         except Exception as ex:
             page.show_snack_bar(ft.SnackBar(ft.Text(f"Error al generar el PDF: {str(ex)}")))
 
-    # UI LAYOUT
-    page.add(
-        ft.Container(
-            content=ft.Column([
-                # ENCABEZADO
-                ft.Row([
-                    ft.Text("MCR IMPULSO - REMISIÓN MÓVIL", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                    txt_folio,
-                    txt_fecha
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Divider(),
-                
-                # DATOS CLIENTE
-                ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor]),
-                txt_direccion,
-                ft.Divider(),
-                
-                # ESPECIALIDADES CHECKBOXES
-                ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
-                ft.Row([
-                    chk_electrofisiologia,
-                    chk_radiologia,
-                    chk_cardiologia,
-                    chk_endovascular,
-                    chk_neuromodulacion
-                ], wrap=True),
-                ft.Divider(),
-
-                # EXPEDIENTE MÉDICO
-                ft.Text("Datos de Expediente y Paciente:", weight=ft.FontWeight.BOLD),
-                ft.Row([txt_paciente, txt_doctor]),
-                ft.Row([txt_episodio, txt_aseguradora, txt_diagnostico]),
-                ft.Divider(),
-
-                # CAPTURA DE PARTIDA
-                ft.Text("Agregar Producto / Partida:", weight=ft.FontWeight.BOLD),
-                ft.Row([
-                    txt_part_cant,
-                    txt_part_cve,
-                    btn_buscar_producto,
-                    txt_part_alg,
-                    txt_part_descr,
-                    txt_part_lote,
-                    txt_part_precio,
-                    ft.ElevatedButton("Agregar", icon=ft.Icons.ADD if hasattr(ft, "Icons") else None, on_click=agregar_partida_click)
+    view_remisiones = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("REMISIONES Y VENTAS EN CAMPO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                btn_sync_sae,
+                txt_folio,
+                txt_fecha
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Divider(),
+            ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor]),
+            txt_direccion,
+            ft.Divider(),
+            ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
+            ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
+            ft.Divider(),
+            ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
+            ft.Row([txt_paciente, txt_doctor]),
+            ft.Row([txt_episodio, txt_aseguradora, txt_diagnostico]),
+            ft.Divider(),
+            ft.Text("Agregar Producto / Partida:", weight=ft.FontWeight.BOLD),
+            ft.Row([txt_part_cant, txt_part_cve, btn_buscar_producto, txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, ft.ElevatedButton("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click)]),
+            dt_partidas,
+            ft.Divider(),
+            ft.Row([
+                ft.Column([
+                    ft.Row([ft.Text("Subtotal: "), lbl_subtotal]),
+                    ft.Row([ft.Text("IVA (16%): "), lbl_iva]),
+                    ft.Row([ft.Text("TOTAL: "), lbl_total]),
                 ]),
-                
-                # TABLA DE PARTIDAS
-                dt_partidas,
-                ft.Divider(),
-
-                # RESUMEN TOTALES Y BOTÓN GENERAR
-                ft.Row([
-                    ft.Column([
-                        ft.Row([ft.Text("Subtotal: "), lbl_subtotal]),
-                        ft.Row([ft.Text("IVA (16%): "), lbl_iva]),
-                        ft.Row([ft.Text("TOTAL: "), lbl_total]),
-                    ]),
-                    ft.ElevatedButton(
-                        "GUARDAR Y GENERAR PDF",
-                        icon=ft.Icons.PICTURE_AS_PDF if hasattr(ft, "Icons") else None,
-                        style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700),
-                        height=50,
-                        on_click=guardar_y_generar_pdf
-                    )
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-            ]),
-            padding=10
-        )
+                ft.ElevatedButton("GUARDAR Y GENERAR PDF", icon=ft.Icons.PICTURE_AS_PDF, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), height=50, on_click=guardar_y_generar_pdf)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        ]),
+        padding=10
     )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # VISTA 2: CATÁLOGO DE CLIENTES
+    # ══════════════════════════════════════════════════════════════════════
+    view_clientes = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("CATÁLOGO DE CLIENTES (SAE)", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                btn_sync_sae
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Divider(),
+            ft.ElevatedButton("Buscar / Consultar Clientes", icon=ft.Icons.SEARCH, on_click=abrir_buscador_cliente)
+        ]),
+        padding=10
+    )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # VISTA 3: CATÁLOGO DE PRODUCTOS / INVENTARIO
+    # ══════════════════════════════════════════════════════════════════════
+    view_productos = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("CATÁLOGO DE INVENTARIO (SAE)", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                btn_sync_sae
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Divider(),
+            ft.ElevatedButton("Buscar / Consultar Productos", icon=ft.Icons.SEARCH, on_click=abrir_buscador_producto)
+        ]),
+        padding=10
+    )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # BARRA DE NAVEGACIÓN MÓVIL (TABS / PESTAÑAS)
+    # ══════════════════════════════════════════════════════════════════════
+    body_container = ft.Container(content=view_remisiones, expand=True)
+
+    def cambiar_pestana(e):
+        idx = e.control.selected_index
+        if idx == 0:
+            body_container.content = view_remisiones
+        elif idx == 1:
+            body_container.content = view_clientes
+        elif idx == 2:
+            body_container.content = view_productos
+        page.update()
+
+    page.navigation_bar = ft.NavigationBar(
+        destinations=[
+            ft.NavigationDestination(icon=ft.Icons.RECEIPT_LONG, label="Remisión / Venta"),
+            ft.NavigationDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
+            ft.NavigationDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
+        ],
+        selected_index=0,
+        on_change=cambiar_pestana
+    )
+
+    page.add(body_container)
 
 if __name__ == "__main__":
     ft.app(target=main)
