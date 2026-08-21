@@ -23,13 +23,12 @@ def main(page: ft.Page):
         ok, msg = sae_connector.sync_catalogos_desde_sae()
         icon_type = ft.Icons.CHECK_CIRCLE if ok else ft.Icons.ERROR
         color_type = ft.Colors.GREEN if ok else ft.Colors.RED
-        page.dialog = ft.AlertDialog(
+        dlg = ft.AlertDialog(
             title=ft.Row([ft.Icon(icon_type, color=color_type), ft.Text("Sincronizador SAE")]),
             content=ft.Text(msg),
-            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close_dialog())]
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close(dlg))]
         )
-        page.dialog.open = True
-        page.update()
+        page.open(dlg)
 
     btn_sync_sae = ft.ElevatedButton(
         "Sincronizar SAE",
@@ -315,13 +314,12 @@ def main(page: ft.Page):
         ok, msg = sae_connector.test_connection()
         icon_t = ft.Icons.CHECK_CIRCLE if ok else ft.Icons.ERROR
         color_t = ft.Colors.GREEN if ok else ft.Colors.RED
-        page.dialog = ft.AlertDialog(
+        dlg = ft.AlertDialog(
             title=ft.Row([ft.Icon(icon_t, color=color_t), ft.Text("Prueba de Conexión")]),
             content=ft.Text(msg),
-            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close_dialog())]
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close(dlg))]
         )
-        page.dialog.open = True
-        page.update()
+        page.open(dlg)
 
     view_ajustes = ft.Container(
         content=ft.Column([
