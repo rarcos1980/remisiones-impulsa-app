@@ -230,25 +230,25 @@ def main(page: ft.Page):
     view_remisiones = ft.Container(
         content=ft.Column([
             ft.Row([
-                ft.Text("REMISIONES Y VENTAS EN CAMPO", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                ft.Text("REMISIONES Y VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
                 btn_sync_sae,
                 txt_folio,
                 txt_fecha
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ], wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ft.Divider(),
-            ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor]),
+            ft.Row([txt_cliente, btn_buscar_cliente, txt_vendedor], wrap=True),
             txt_direccion,
             ft.Divider(),
             ft.Text("Especialidades Médico-Quirúrgicas:", weight=ft.FontWeight.BOLD),
             ft.Row([chk_electrofisiologia, chk_radiologia, chk_cardiologia, chk_endovascular, chk_neuromodulacion], wrap=True),
             ft.Divider(),
             ft.Text("Expediente Médico y Paciente:", weight=ft.FontWeight.BOLD),
-            ft.Row([txt_paciente, txt_doctor]),
-            ft.Row([txt_episodio, txt_aseguradora, txt_diagnostico]),
+            ft.Row([txt_paciente, txt_doctor], wrap=True),
+            ft.Row([txt_episodio, txt_aseguradora, txt_diagnostico], wrap=True),
             ft.Divider(),
             ft.Text("Agregar Producto / Partida:", weight=ft.FontWeight.BOLD),
-            ft.Row([txt_part_cant, txt_part_cve, btn_buscar_producto, txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, ft.ElevatedButton("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click)]),
-            dt_partidas,
+            ft.Row([txt_part_cant, txt_part_cve, btn_buscar_producto, txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, ft.ElevatedButton("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click)], wrap=True),
+            ft.Row([dt_partidas], scroll=ft.ScrollMode.ALWAYS),
             ft.Divider(),
             ft.Row([
                 ft.Column([
@@ -257,9 +257,10 @@ def main(page: ft.Page):
                     ft.Row([ft.Text("TOTAL: "), lbl_total]),
                 ]),
                 ft.ElevatedButton("GUARDAR Y GENERAR PDF", icon=ft.Icons.PICTURE_AS_PDF, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), height=50, on_click=guardar_y_generar_pdf)
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-        ]),
-        padding=10
+            ], wrap=True, alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        ], scroll=ft.ScrollMode.AUTO),
+        padding=10,
+        expand=True
     )
 
     # ══════════════════════════════════════════════════════════════════════
@@ -396,16 +397,17 @@ def main(page: ft.Page):
             ft.Text("CONFIGURACIÓN CONEXIÓN CON ASPEL SAE", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
             ft.Text("Configure la ruta del servidor Firebird y la empresa para sincronización táctil:"),
             ft.Divider(),
-            ft.Row([txt_cfg_host, txt_cfg_empresa]),
+            ft.Row([txt_cfg_host, txt_cfg_empresa], wrap=True),
             txt_cfg_database,
-            ft.Row([txt_cfg_user, txt_cfg_password]),
+            ft.Row([txt_cfg_user, txt_cfg_password], wrap=True),
             ft.Divider(),
             ft.Row([
                 ft.ElevatedButton("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
                 ft.ElevatedButton("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click),
-            ])
-        ]),
-        padding=10
+            ], wrap=True)
+        ], scroll=ft.ScrollMode.AUTO),
+        padding=10,
+        expand=True
     )
 
     # ══════════════════════════════════════════════════════════════════════
