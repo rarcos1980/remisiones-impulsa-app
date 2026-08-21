@@ -260,6 +260,37 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 2: CATÁLOGO DE CLIENTES
     # ══════════════════════════════════════════════════════════════════════
+    lv_clientes_cat = ft.ListView(expand=True, spacing=5, height=450)
+    txt_filtro_clie = ft.TextField(label="Filtrar Clientes", hint_text="Buscar por Clave o Nombre...", expand=True)
+
+    def cargar_tabla_clientes(e=None):
+        lv_clientes_cat.controls.clear()
+        filtro = (txt_filtro_clie.value or "").strip()
+        try:
+            conn = db_local.get_connection()
+            cur = conn.cursor()
+            if filtro:
+                cur.execute("SELECT clave, nombre, rfc, direccion FROM clientes WHERE clave LIKE ? OR UPPER(nombre) LIKE UPPER(?) LIMIT 50", (f"%{filtro}%", f"%{filtro}%"))
+            else:
+                cur.execute("SELECT clave, nombre, rfc, direccion FROM clientes LIMIT 50")
+            rows = cur.fetchall()
+            conn.close()
+            
+            for r in rows:
+                c_clave, c_nom, c_rfc, c_dir = r['clave'], r['nombre'], r['rfc'] or '', r['direccion'] or ''
+                lv_clientes_cat.controls.append(
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.PERSON, color=ft.Colors.BLUE_800),
+                        title=ft.Text(f"{c_nom} ({c_clave})", weight=ft.FontWeight.BOLD),
+                        subtitle=ft.Text(f"RFC: {c_rfc} | Dirección: {c_dir}")
+                    )
+                )
+        except Exception as ex:
+            lv_clientes_cat.controls.append(ft.Text(f"Error: {str(ex)}"))
+        page.update()
+
+    txt_filtro_clie.on_change = cargar_tabla_clientes
+
     view_clientes = ft.Container(
         content=ft.Column([
             ft.Row([
@@ -267,7 +298,8 @@ def main(page: ft.Page):
                 btn_sync_sae
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ft.Divider(),
-            ft.ElevatedButton("Buscar / Consultar Clientes", icon=ft.Icons.SEARCH, on_click=abrir_buscador_cliente)
+            ft.Row([txt_filtro_clie, ft.IconButton(icon=ft.Icons.REFRESH, tooltip="Actualizar Lista", on_click=cargar_tabla_clientes)]),
+            lv_clientes_cat
         ]),
         padding=10
     )
@@ -275,6 +307,37 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 3: CATÁLOGO DE PRODUCTOS / INVENTARIO
     # ══════════════════════════════════════════════════════════════════════
+    lv_productos_cat = ft.ListView(expand=True, spacing=5, height=450)
+    txt_filtro_prod = ft.TextField(label="Filtrar Productos", hint_text="Buscar por Clave o Descripción...", expand=True)
+
+    def cargar_tabla_productos(e=None):
+        lv_productos_cat.controls.clear()
+        filtro = (txt_filtro_prod.value or "").strip()
+        try:
+            conn = db_local.get_connection()
+            cur = conn.cursor()
+            if filtro:
+                cur.execute("SELECT clave, descripcion, precio, existencia FROM productos WHERE clave LIKE ? OR UPPER(descripcion) LIKE UPPER(?) LIMIT 50", (f"%{filtro}%", f"%{filtro}%"))
+            else:
+                cur.execute("SELECT clave, descripcion, precio, existencia FROM productos LIMIT 50")
+            rows = cur.fetchall()
+            conn.close()
+            
+            for r in rows:
+                p_cve, p_desc, p_prec, p_exis = r['clave'], r['descripcion'], float(r['precio'] or 0), float(r['existencia'] or 0)
+                lv_productos_cat.controls.append(
+                    ft.ListTile(
+                        leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.GREEN_800),
+                        title=ft.Text(f"{p_desc} ({p_cve})", weight=ft.FontWeight.BOLD),
+                        subtitle=ft.Text(f"Precio: ${p_prec:,.2f} | Stock Disponible: {p_exis:.2f}")
+                    )
+                )
+        except Exception as ex:
+            lv_productos_cat.controls.append(ft.Text(f"Error: {str(ex)}"))
+        page.update()
+
+    txt_filtro_prod.on_change = cargar_tabla_productos
+
     view_productos = ft.Container(
         content=ft.Column([
             ft.Row([
@@ -282,7 +345,8 @@ def main(page: ft.Page):
                 btn_sync_sae
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ft.Divider(),
-            ft.ElevatedButton("Buscar / Consultar Productos", icon=ft.Icons.SEARCH, on_click=abrir_buscador_producto)
+            ft.Row([txt_filtro_prod, ft.IconButton(icon=ft.Icons.REFRESH, tooltip="Actualizar Lista", on_click=cargar_tabla_productos)]),
+            lv_productos_cat
         ]),
         padding=10
     )
@@ -350,8 +414,10 @@ def main(page: ft.Page):
             body_container.content = view_remisiones
         elif idx == 1:
             body_container.content = view_clientes
+            cargar_tabla_clientes()
         elif idx == 2:
             body_container.content = view_productos
+            cargar_tabla_productos()
         elif idx == 3:
             body_container.content = view_ajustes
         page.update()

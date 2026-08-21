@@ -1,8 +1,8 @@
 {
-    "host": "localhost",
-    "database": "C:\\Program Files (x86)\\Common Files\\Aspel\\Sistemas Aspel\\SAE9.00\\Empresa01\\Datos\\SAE90EMPRE01.FDB",
+    "host": "192.168.1.70",
+    "database": "C:\\Program Files (x86)\\Common Files\\Aspel\\Sistemas Aspel\\SAE8.00\\Empresa01\\Datos\\SAE80EMPRE01.FDB",
+    "empresa": "01",
     "user": "SYSDBA",
     "password": "masterkey",
-    "charset": "UTF8",
-    "empresa": "01"
+    "charset": "UTF8"
 }

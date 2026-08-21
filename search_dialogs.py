@@ -46,10 +46,9 @@ def search_clients_dialog(page: ft.Page, on_select_callback):
                 for r in rows:
                     clave, nombre, rfc, direccion = r[0], r[1], r[2] or '', r[3] or ''
                     
-                    def seleccionar(e, c=clave, n=nombre, d=direccion):
+                    def seleccionar(ev, c=clave, n=nombre, d=direccion):
                         on_select_callback(c, n, d)
-                        dlg.open = False
-                        page.update()
+                        page.pop_dialog()
 
                     lv_resultados.controls.append(
                         ft.ListTile(
@@ -74,18 +73,16 @@ def search_clients_dialog(page: ft.Page, on_select_callback):
                 ft.Divider(),
                 lv_resultados
             ]),
-            width=500,
-            height=400
+            width=550,
+            height=420
         ),
         actions=[
-            ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg, "open", False) or page.update())
+            ft.TextButton("Cancelar", on_click=lambda ev: page.pop_dialog())
         ]
     )
 
-    page.dialog = dlg
-    dlg.open = True
+    page.show_dialog(dlg)
     realizar_busqueda()
-    page.update()
 
 def search_products_dialog(page: ft.Page, on_select_callback):
     """
@@ -131,10 +128,9 @@ def search_products_dialog(page: ft.Page, on_select_callback):
                 for r in rows:
                     clave, descr, precio, exist = r[0], r[1], float(r[2] or 0), float(r[3] or 0)
                     
-                    def seleccionar(e, c=clave, d=descr, p=precio):
+                    def seleccionar(ev, c=clave, d=descr, p=precio):
                         on_select_callback(c, d, p)
-                        dlg.open = False
-                        page.update()
+                        page.pop_dialog()
 
                     lv_resultados.controls.append(
                         ft.ListTile(
@@ -159,15 +155,13 @@ def search_products_dialog(page: ft.Page, on_select_callback):
                 ft.Divider(),
                 lv_resultados
             ]),
-            width=550,
-            height=400
+            width=580,
+            height=420
         ),
         actions=[
-            ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg, "open", False) or page.update())
+            ft.TextButton("Cancelar", on_click=lambda ev: page.pop_dialog())
         ]
     )
 
-    page.dialog = dlg
-    dlg.open = True
+    page.show_dialog(dlg)
     realizar_busqueda()
-    page.update()
