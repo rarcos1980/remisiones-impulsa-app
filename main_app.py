@@ -289,6 +289,58 @@ def main(page: ft.Page):
     )
 
     # ══════════════════════════════════════════════════════════════════════
+    # VISTA 4: AJUSTES Y CONFIGURACIÓN DE BASE DE DATOS SAE
+    # ══════════════════════════════════════════════════════════════════════
+    cfg_actual = sae_connector.load_config()
+    
+    txt_cfg_host = ft.TextField(label="Servidor / Host (IP o localhost)", value=cfg_actual.get('host', 'localhost'), expand=True)
+    txt_cfg_database = ft.TextField(label="Ruta Base de Datos Firebird (.FDB)", value=cfg_actual.get('database', ''), expand=True)
+    txt_cfg_empresa = ft.TextField(label="No. Empresa (ej: 01, 07)", value=cfg_actual.get('empresa', '01'), width=140)
+    txt_cfg_user = ft.TextField(label="Usuario Firebird", value=cfg_actual.get('user', 'SYSDBA'), width=160)
+    txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, width=180)
+
+    def guardar_config_click(e):
+        nuevos_datos = {
+            'host': txt_cfg_host.value.strip(),
+            'database': txt_cfg_database.value.strip(),
+            'empresa': txt_cfg_empresa.value.strip(),
+            'user': txt_cfg_user.value.strip(),
+            'password': txt_cfg_password.value.strip(),
+            'charset': 'UTF8'
+        }
+        ok, msg = sae_connector.save_config(nuevos_datos)
+        page.show_snack_bar(ft.SnackBar(ft.Text(msg)))
+
+    def probar_conexion_click(e):
+        ok, msg = sae_connector.test_connection()
+        icon_t = ft.Icons.CHECK_CIRCLE if ok else ft.Icons.ERROR
+        color_t = ft.Colors.GREEN if ok else ft.Colors.RED
+        page.dialog = ft.AlertDialog(
+            title=ft.Row([ft.Icon(icon_t, color=color_t), ft.Text("Prueba de Conexión")]),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.close_dialog())]
+        )
+        page.dialog.open = True
+        page.update()
+
+    view_ajustes = ft.Container(
+        content=ft.Column([
+            ft.Text("CONFIGURACIÓN CONEXIÓN CON ASPEL SAE", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+            ft.Text("Configure la ruta del servidor Firebird y la empresa para sincronización táctil:"),
+            ft.Divider(),
+            ft.Row([txt_cfg_host, txt_cfg_empresa]),
+            txt_cfg_database,
+            ft.Row([txt_cfg_user, txt_cfg_password]),
+            ft.Divider(),
+            ft.Row([
+                ft.ElevatedButton("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
+                ft.ElevatedButton("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click),
+            ])
+        ]),
+        padding=10
+    )
+
+    # ══════════════════════════════════════════════════════════════════════
     # BARRA DE NAVEGACIÓN MÓVIL (TABS / PESTAÑAS)
     # ══════════════════════════════════════════════════════════════════════
     body_container = ft.Container(content=view_remisiones, expand=True)
@@ -301,6 +353,8 @@ def main(page: ft.Page):
             body_container.content = view_clientes
         elif idx == 2:
             body_container.content = view_productos
+        elif idx == 3:
+            body_container.content = view_ajustes
         page.update()
 
     page.navigation_bar = ft.NavigationBar(
@@ -308,6 +362,7 @@ def main(page: ft.Page):
             ft.NavigationBarDestination(icon=ft.Icons.RECEIPT_LONG, label="Remisión / Venta"),
             ft.NavigationBarDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
             ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
+            ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Ajustes SAE"),
         ],
         selected_index=0,
         on_change=cambiar_pestana

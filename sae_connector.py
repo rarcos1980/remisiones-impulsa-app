@@ -1,35 +1,82 @@
+import json
+import os
 import firebirdsql
 import sqlite3
-import os
-import logging
 
-logger = logging.getLogger(__name__)
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config_sae.json")
 
-# Configuración por defecto BD Firebird (SAE 9 Empresa01 local o IP)
-DB_CONFIG = {
+DEFAULT_CONFIG = {
     'host': 'localhost',
     'database': r'C:\Program Files (x86)\Common Files\Aspel\Sistemas Aspel\SAE9.00\Empresa01\Datos\SAE90EMPRE01.FDB',
     'user': 'SYSDBA',
     'password': 'masterkey',
-    'charset': 'UTF8'
+    'charset': 'UTF8',
+    'empresa': '01'
 }
+
+def load_config():
+    """Carga la configuración de conexión a SAE desde JSON o genera la por defecto."""
+    if not os.path.exists(CONFIG_FILE):
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+            return cfg
+    except Exception:
+        return DEFAULT_CONFIG
+
+def save_config(cfg_dict):
+    """Guarda la configuración de conexión a SAE en JSON."""
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cfg_dict, f, indent=4)
+        return True, "Configuración guardada correctamente."
+    except Exception as e:
+        return False, f"Error al guardar configuración: {str(e)}"
 
 DB_LOCAL_PATH = os.path.join(os.path.dirname(__file__), "remisiones_local.db")
 
-def sync_catalogos_desde_sae():
-    """
-    Sincroniza directamente los catálogos de Clientes, Productos y Vendedores
-    desde la base de datos de Aspel SAE (Firebird) hacia la SQLite local de la app.
-    """
+def test_connection():
+    """Prueba la conexión directa con la base de datos Firebird de SAE."""
+    cfg = load_config()
     try:
-        fb_conn = firebirdsql.connect(**DB_CONFIG)
+        conn = firebirdsql.connect(
+            host=cfg.get('host', 'localhost'),
+            database=cfg.get('database', ''),
+            user=cfg.get('user', 'SYSDBA'),
+            password=cfg.get('password', 'masterkey'),
+            charset=cfg.get('charset', 'UTF8')
+        )
+        conn.close()
+        return True, "Conexión exitosa con la base de datos de Aspel SAE."
+    except Exception as e:
+        return False, f"Error al conectar a SAE: {str(e)}"
+
+def sync_catalogos_desde_sae():
+    """Sincroniza los catálogos de Clientes, Productos y Vendedores de SAE hacia SQLite local."""
+    cfg = load_config()
+    emp = cfg.get('empresa', '01').zfill(2)
+    
+    tbl_clie = f"CLIE{emp}"
+    tbl_inve = f"INVE{emp}"
+    tbl_vend = f"VEND{emp}"
+
+    try:
+        fb_conn = firebirdsql.connect(
+            host=cfg.get('host', 'localhost'),
+            database=cfg.get('database', ''),
+            user=cfg.get('user', 'SYSDBA'),
+            password=cfg.get('password', 'masterkey'),
+            charset=cfg.get('charset', 'UTF8')
+        )
         cur_fb = fb_conn.cursor()
 
         sqlite_conn = sqlite3.connect(DB_LOCAL_PATH)
         cur_sq = sqlite_conn.cursor()
 
-        # 1. Sync Clientes (CLIE01)
-        cur_fb.execute("SELECT TRIM(CLAVE), TRIM(NOMBRE), TRIM(RFC), TRIM(CALLE) FROM CLIE01 WHERE STATUS = 'A'")
+        # 1. Sync Clientes
+        cur_fb.execute(f"SELECT TRIM(CLAVE), TRIM(NOMBRE), TRIM(RFC), TRIM(CALLE) FROM {tbl_clie} WHERE STATUS = 'A'")
         clientes_fb = cur_fb.fetchall()
         for c in clientes_fb:
             clave, nombre, rfc, direccion = c[0], c[1], c[2] or '', c[3] or ''
@@ -42,8 +89,8 @@ def sync_catalogos_desde_sae():
                     direccion=excluded.direccion
             """, (clave, nombre, rfc, direccion))
 
-        # 2. Sync Productos (INVE01)
-        cur_fb.execute("SELECT TRIM(CVE_ART), TRIM(DESCR), EXIST FROM INVE01 WHERE STATUS = 'A'")
+        # 2. Sync Productos
+        cur_fb.execute(f"SELECT TRIM(CVE_ART), TRIM(DESCR), EXIST FROM {tbl_inve} WHERE STATUS = 'A'")
         productos_fb = cur_fb.fetchall()
         for p in productos_fb:
             clave, descr, exist = p[0], p[1], float(p[2] or 0.0)
@@ -57,8 +104,8 @@ def sync_catalogos_desde_sae():
                     existencia=excluded.existencia
             """, (clave, descr, precio, exist))
 
-        # 3. Sync Vendedores (VEND01)
-        cur_fb.execute("SELECT TRIM(CVE_VEND), TRIM(NOMBRE) FROM VEND01 WHERE STATUS = 'A'")
+        # 3. Sync Vendedores
+        cur_fb.execute(f"SELECT TRIM(CVE_VEND), TRIM(NOMBRE) FROM {tbl_vend} WHERE STATUS = 'A'")
         vendedores_fb = cur_fb.fetchall()
         for v in vendedores_fb:
             clave, nombre = v[0], v[1]
@@ -71,12 +118,7 @@ def sync_catalogos_desde_sae():
         sqlite_conn.commit()
         fb_conn.close()
         sqlite_conn.close()
-        print(f"Sincronización exitosa: {len(clientes_fb)} clientes, {len(productos_fb)} productos, {len(vendedores_fb)} vendedores desde SAE.")
-        return True, f"Catálogos actualizados desde SAE ({len(productos_fb)} productos, {len(clientes_fb)} clientes)."
+        return True, f"Catálogos de Empresa {emp} actualizados desde SAE ({len(productos_fb)} productos, {len(clientes_fb)} clientes)."
     except Exception as e:
-        msg = f"Error al conectar con SAE Firebird: {str(e)}"
-        print(msg)
+        msg = f"Error al conectar con SAE Firebird ({tbl_inve}): {str(e)}"
         return False, msg
-
-if __name__ == "__main__":
-    sync_catalogos_desde_sae()
