@@ -286,7 +286,7 @@ def main(page: ft.Page):
         padding=10,
         bgcolor=ft.Colors.GREY_100,
         border_radius=8,
-        border=ft.border.all(1, ft.Colors.GREY_300)
+        border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300), bottom=ft.BorderSide(1, ft.Colors.GREY_300), left=ft.BorderSide(1, ft.Colors.GREY_300), right=ft.BorderSide(1, ft.Colors.GREY_300))
     )
 
     view_remisiones = ft.Container(
