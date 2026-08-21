@@ -125,7 +125,7 @@ def main(page: ft.Page):
 
     def agregar_partida_click(e):
         if not txt_part_descr.value:
-            page.show_snack_bar(ft.SnackBar(ft.Text("Escriba la descripción del producto")))
+            page.open(ft.SnackBar(ft.Text("Escriba la descripción del producto")))
             return
         
         try:
@@ -166,14 +166,14 @@ def main(page: ft.Page):
             )
             calcular_totales()
         except ValueError:
-            page.show_snack_bar(ft.SnackBar(ft.Text("Valores numéricos inválidos en cantidad o precio")))
+            page.open(ft.SnackBar(ft.Text("Valores numéricos inválidos en cantidad o precio")))
 
     def guardar_y_generar_pdf(e):
         if not txt_cliente.value:
-            page.show_snack_bar(ft.SnackBar(ft.Text("Por favor ingrese el nombre del Cliente")))
+            page.open(ft.SnackBar(ft.Text("Por favor ingrese el nombre del Cliente")))
             return
         if not items_partidas:
-            page.show_snack_bar(ft.SnackBar(ft.Text("Debe agregar al menos una partida a la remisión")))
+            page.open(ft.SnackBar(ft.Text("Debe agregar al menos una partida a la remisión")))
             return
         
         subtotal = sum(p['total_partida'] for p in items_partidas)
@@ -221,7 +221,7 @@ def main(page: ft.Page):
             page.dialog.open = True
             page.update()
         except Exception as ex:
-            page.show_snack_bar(ft.SnackBar(ft.Text(f"Error al generar el PDF: {str(ex)}")))
+            page.open(ft.SnackBar(ft.Text(f"Error al generar el PDF: {str(ex)}")))
 
     view_remisiones = ft.Container(
         content=ft.Column([
@@ -309,7 +309,7 @@ def main(page: ft.Page):
             'charset': 'UTF8'
         }
         ok, msg = sae_connector.save_config(nuevos_datos)
-        page.show_snack_bar(ft.SnackBar(ft.Text(msg)))
+        page.open(ft.SnackBar(ft.Text(msg)))
 
     def probar_conexion_click(e):
         ok, msg = sae_connector.test_connection()
