@@ -22,7 +22,6 @@ jobs:
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
           channel: 'stable'
 
       - name: Set up Python 3.11
@@ -33,11 +32,11 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "flet>=0.22.0,<0.25.0" reportlab
+          pip install flet flet-cli reportlab
 
       - name: Build Android APK
         run: |
-          flet build apk --module-name main_app
+          flet build apk --module-name main_app --yes
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
