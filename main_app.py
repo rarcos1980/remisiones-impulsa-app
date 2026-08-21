@@ -236,7 +236,7 @@ def main(page: ft.Page):
     # 1. Acordeón para Datos Generales
     acordeon_cliente = ft.ExpansionTile(
         title=ft.Text("1. Datos Generales de la Remisión", weight=ft.FontWeight.BOLD, size=16),
-        initially_expanded=True,
+        expanded=True,
         controls=[
             ft.Container(padding=10, content=ft.Column([
                 ft.ResponsiveRow([txt_folio, txt_fecha]),
