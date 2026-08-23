@@ -44,7 +44,7 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 1: CAPTURA DE REMISIONES / VENTAS
     # ══════════════════════════════════════════════════════════════════════
-    txt_folio = ft.TextField(label="Folio", value=f"221805", col={"xs": 6})
+    txt_folio = ft.TextField(label="Folio", value=datetime.now().strftime('%d%H%M'), col={"xs": 6})
     txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"xs": 6})
 
     # Buscador unificado
@@ -211,11 +211,20 @@ def main(page: ft.Page):
         
         try:
             ok_db, rem_id, msg_db = db_local.guardar_remision_local(datos_remision, items_partidas)
+            if not ok_db:
+                dlg = ft.AlertDialog(
+                    title=ft.Text("Error al Guardar Venta", color=ft.Colors.RED),
+                    content=ft.Text(f"Hubo un problema:\n{msg_db}"),
+                    actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.pop_dialog())]
+                )
+                page.show_dialog(dlg)
+                return
+                
             pdf_generator.generar_pdf_ticket_58mm(datos_remision, items_partidas, pdf_path)
             
             dlg = ft.AlertDialog(
                 title=ft.Text("Venta Guardada y Ticket Generado"),
-                content=ft.Text(f"La venta fue registrada localmente en SQLite (ID: {rem_id})."),
+                content=ft.Text(f"La venta fue registrada localmente en SQLite (ID: {rem_id}).\n{msg_db}"),
                 actions=[
                     ft.TextButton("OK", on_click=lambda ev: page.pop_dialog())
                 ]
