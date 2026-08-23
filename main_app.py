@@ -565,9 +565,11 @@ def main(page: ft.Page):
                     encabezado, partidas = db_local.obtener_venta_completa(v['id'])
                     if encabezado and partidas:
                         for p in partidas:
+                            cve_doc = str(encabezado.get('folio', ''))
+                            cve_art = str(p.get('cve_producto', ''))
                             writer.writerow([
-                                encabezado.get('folio', ''),
-                                p.get('cve_producto', ''),
+                                f'="{cve_doc}"' if cve_doc else '',
+                                f'="{cve_art}"' if cve_art else '',
                                 p.get('descripcion', ''),
                                 p.get('cantidad', 0),
                                 p.get('precio_unitario', 0)
