@@ -406,6 +406,13 @@ def generar_pdf_ticket_58mm(datos_remision, partidas, output_path):
     story.append(tbl_tot)
     story.append(Spacer(1, 4*mm))
     
+    # 4.5 Observaciones
+    obs = datos_remision.get('observaciones', '').strip()
+    if obs:
+        story.append(Paragraph("<b>Observaciones:</b>", style_bold_left))
+        story.append(Paragraph(obs, style_left))
+        story.append(Spacer(1, 4*mm))
+    
     # 5. Pie de ticket
     story.append(Paragraph("GRACIAS POR SU COMPRA", style_bold_center))
     story.append(Spacer(1, 2*mm))
