@@ -7,9 +7,10 @@ import search_dialogs
 import sae_connector
 
 def main(page: ft.Page):
-    page.title = "PTOVENTAMOVIL - Punto de Venta Móvil"
+    page.title = "Sistema de Remisiones Móvil"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 10
+    page.window_width = 400
+    page.window_height = 700
     page.scroll = ft.ScrollMode.AUTO
     
     # Inicializar BD local
@@ -40,261 +41,216 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 1: CAPTURA DE REMISIONES / VENTAS
     # ══════════════════════════════════════════════════════════════════════
-    txt_folio = ft.TextField(label="Folio Remisión", value=f"REM-{datetime.now().strftime('%d%H%M')}", read_only=True, col={"md": 4, "xs": 12})
-    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"md": 4, "xs": 12})
-    txt_cliente = ft.TextField(label="Cliente / Clínica", hint_text="Nombre del Cliente", col={"md": 6, "xs": 10})
-    txt_direccion = ft.TextField(label="Dirección Cliente", col={"md": 12, "xs": 12})
-    txt_vendedor = ft.TextField(label="Vendedor / Agente", value="DANIEL ALEJANDRO VIELMA TELLE", col={"md": 5, "xs": 12})
-
-    def abrir_buscador_cliente(e):
-        def cliente_seleccionado(clave, nombre, direccion):
-            txt_cliente.value = f"{nombre} ({clave})"
-            txt_direccion.value = direccion
-            page.update()
-        search_dialogs.search_clients_dialog(page, cliente_seleccionado)
-
-    btn_buscar_cliente = ft.IconButton(
-        icon=ft.Icons.SEARCH,
-        tooltip="Buscar Cliente en Catálogo",
-        on_click=abrir_buscador_cliente,
-        col={"md": 1, "xs": 2}
+    # Cabecera Simplificada
+    dd_tipo_doc = ft.Dropdown(
+        label="Tipo",
+        value="V",
+        options=[ft.dropdown.Option("V", "Nota de Venta (V)"), ft.dropdown.Option("C", "Cotización (C)")],
+        col={"md": 3, "xs": 4}
     )
+    txt_folio = ft.TextField(label="Folio", value=f"221805", col={"md": 5, "xs": 4})
+    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"md": 4, "xs": 4})
 
-    # Campos eliminados a petición del usuario (Paciente, Doctor, etc.)
-
-    # Totales UI
-    lbl_subtotal = ft.Text(value="$0.00", size=16, weight=ft.FontWeight.BOLD)
-    lbl_iva = ft.Text(value="$0.00", size=16, weight=ft.FontWeight.BOLD)
-    lbl_total = ft.Text(value="$0.00", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
-
-    # Formulario Agregar Partida
-    txt_part_cant = ft.TextField(label="Cant.", value="1", keyboard_type=ft.KeyboardType.NUMBER, col={"md": 1, "xs": 4})
-    txt_part_cve = ft.TextField(label="Cve. Prod", col={"md": 2, "xs": 6})
-    txt_part_alg = ft.TextField(label="ALG", col={"md": 1, "xs": 3})
-    txt_part_descr = ft.TextField(label="Descripción del Producto", col={"md": 4, "xs": 9})
-    txt_part_lote = ft.TextField(label="Lote", col={"md": 2, "xs": 4})
-    txt_part_precio = ft.TextField(label="Precio U.", value="0.00", keyboard_type=ft.KeyboardType.NUMBER, col={"md": 2, "xs": 4})
-
+    # Buscador unificado
     def abrir_buscador_producto(e):
         def producto_seleccionado(clave, descripcion, precio):
-            txt_part_cve.value = clave
-            txt_part_descr.value = descripcion
-            txt_part_precio.value = f"{precio:.2f}"
-            page.update()
+            agregar_partida_directa(clave, descripcion, precio)
         search_dialogs.search_products_dialog(page, producto_seleccionado)
 
-    btn_buscar_producto = ft.IconButton(
-        icon=ft.Icons.SEARCH,
-        tooltip="Buscar Producto en Catálogo",
+    txt_buscar = ft.TextField(
+        label="Buscar Producto / Insumo", 
+        hint_text="Escriba Clave o Descripción... (Toque para buscar)", 
+        read_only=True,
         on_click=abrir_buscador_producto,
-        col={"md": 1, "xs": 2}
+        icon=ft.Icons.SEARCH
     )
 
-    lv_partidas = ft.Column(spacing=5)
+    lbl_total = ft.Text(value="$0.00", size=24, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
+    lv_partidas = ft.Column(spacing=0)
 
     def calcular_totales():
         subtotal = sum(p['total_partida'] for p in items_partidas)
         iva = subtotal * 0.16
         total = subtotal + iva
-        lbl_subtotal.value = f"${subtotal:,.2f}"
-        lbl_iva.value = f"${iva:,.2f}"
         lbl_total.value = f"${total:,.2f}"
         page.update()
 
-    def agregar_partida_click(e):
-        if not txt_part_descr.value:
-            page.open(ft.SnackBar(ft.Text("Escriba la descripción del producto")))
-            return
+    def agregar_partida_directa(clave, descripcion, precio):
+        pu = float(precio or 0)
+        p = {
+            'cantidad': 1.0,
+            'cve_producto': clave,
+            'alg': '',
+            'descripcion': descripcion,
+            'lote': '',
+            'precio_unitario': pu,
+            'total_partida': pu
+        }
+        items_partidas.append(p)
         
-        try:
-            cant = float(txt_part_cant.value or 1)
-            pu = float(txt_part_precio.value or 0)
-            tot = cant * pu
-            
-            p = {
-                'cantidad': cant,
-                'cve_producto': txt_part_cve.value or '',
-                'alg': txt_part_alg.value or '',
-                'descripcion': txt_part_descr.value,
-                'lote': txt_part_lote.value or '',
-                'precio_unitario': pu,
-                'total_partida': tot
-            }
-            items_partidas.append(p)
-            
-            txt_part_cant.value = "1"
-            txt_part_cve.value = ""
-            txt_part_alg.value = ""
-            txt_part_descr.value = ""
-            txt_part_lote.value = ""
-            txt_part_precio.value = "0.00"
-            
-            def btn_eliminar_click(e, p_item=p):
-                items_partidas.remove(p_item)
-                for t in lv_partidas.controls[:]:
-                    if t.data == p_item:
-                        lv_partidas.controls.remove(t)
-                calcular_totales()
-
-            # TextFields editables en el carrito
-            txt_qty = ft.TextField(value=str(cant), label="Cant.", width=80, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
-            txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=100, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
-            lbl_tot = ft.Text(f"${tot:,.2f}", weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700)
-
-            def update_item_totals(e):
-                try:
-                    new_cant = float(txt_qty.value or 0)
-                    new_pu = float(txt_prc.value or 0)
-                    p['cantidad'] = new_cant
-                    p['precio_unitario'] = new_pu
-                    p['total_partida'] = new_cant * new_pu
-                    lbl_tot.value = f"${p['total_partida']:,.2f}"
-                    calcular_totales()
-                except ValueError:
-                    pass
-
-            txt_qty.on_change = update_item_totals
-            txt_prc.on_change = update_item_totals
-
-            tile = ft.Container(
-                content=ft.ListTile(
-                    leading=ft.Icon(ft.Icons.SHOPPING_CART, color=ft.Colors.BLUE_500),
-                    title=ft.Text(f"{p['descripcion']} (Cve: {p['cve_producto']})", weight=ft.FontWeight.BOLD),
-                    subtitle=ft.Row([txt_qty, txt_prc, ft.Text("Total:"), lbl_tot, ft.Text(f"Lote: {p['lote']}")], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                    trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED, on_click=btn_eliminar_click)
-                ),
-                data=p,
-                bgcolor=ft.Colors.WHITE,
-                border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300), bottom=ft.BorderSide(1, ft.Colors.GREY_300), left=ft.BorderSide(1, ft.Colors.GREY_300), right=ft.BorderSide(1, ft.Colors.GREY_300)),
-                border_radius=8
-            )
-            lv_partidas.controls.append(tile)
+        def btn_eliminar_click(e, p_item=p):
+            items_partidas.remove(p_item)
+            for t in lv_partidas.controls[:]:
+                if t.data == p_item:
+                    lv_partidas.controls.remove(t)
             calcular_totales()
-        except ValueError:
-            page.open(ft.SnackBar(ft.Text("Valores numéricos inválidos en cantidad o precio")))
 
-    def guardar_y_generar_pdf(e):
-        if not txt_cliente.value:
-            page.open(ft.SnackBar(ft.Text("Por favor ingrese el nombre del Cliente")))
-            return
+        # UI del Item en el carrito
+        txt_qty = ft.TextField(value="1", label="Cant.", width=80, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
+        txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=100, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
+        
+        def update_item_totals(e):
+            try:
+                new_cant = float(txt_qty.value or 0)
+                new_pu = float(txt_prc.value or 0)
+                p['cantidad'] = new_cant
+                p['precio_unitario'] = new_pu
+                p['total_partida'] = new_cant * new_pu
+                calcular_totales()
+            except ValueError:
+                pass
+
+        txt_qty.on_change = update_item_totals
+        txt_prc.on_change = update_item_totals
+
+        tile = ft.Container(
+            content=ft.ListTile(
+                leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.GREY_700, size=30),
+                title=ft.Text(f"{p['descripcion']} ({p['cve_producto']})", weight=ft.FontWeight.W_500, size=14),
+                subtitle=ft.Row([txt_qty, txt_prc], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_400, on_click=btn_eliminar_click)
+            ),
+            data=p,
+            bgcolor=ft.Colors.GREY_100,
+            border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_300)),
+            padding=5
+        )
+        lv_partidas.controls.append(tile)
+        calcular_totales()
+
+    # MODAL DE COBRO
+    txt_cobro_cliente = ft.TextField(label="Cliente", value="CLIENTE MOSTR", col={"md": 10, "xs": 10})
+    txt_cobro_condicion = ft.TextField(label="Condición", value="CONTADO", col={"md": 12, "xs": 12})
+    txt_cobro_observaciones = ft.TextField(label="Observaciones", multiline=True, min_lines=2, col={"md": 12, "xs": 12})
+
+    def abrir_buscador_cliente_modal(e):
+        def cliente_seleccionado(clave, nombre, direccion):
+            txt_cobro_cliente.value = f"{nombre} ({clave})"
+            page.update()
+        search_dialogs.search_clients_dialog(page, cliente_seleccionado)
+
+    btn_buscar_cliente_modal = ft.IconButton(icon=ft.Icons.SEARCH, on_click=abrir_buscador_cliente_modal, col={"md": 2, "xs": 2})
+
+    dlg_cobro = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("Finalizar Venta"),
+        content=ft.Container(
+            width=400,
+            content=ft.Column([
+                ft.ResponsiveRow([txt_cobro_cliente, btn_buscar_cliente_modal]),
+                ft.ResponsiveRow([txt_cobro_condicion]),
+                ft.ResponsiveRow([txt_cobro_observaciones])
+            ], tight=True)
+        ),
+        actions=[
+            ft.TextButton("Cancelar", on_click=lambda e: cerrar_modal_cobro()),
+            ft.ElevatedButton("Confirmar Cobro", bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE, on_click=lambda e: ejecutar_guardado())
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
+
+    def cerrar_modal_cobro():
+        page.pop_dialog()
+
+    def mostrar_modal_cobro(e):
         if not items_partidas:
-            page.open(ft.SnackBar(ft.Text("Debe agregar al menos una partida a la remisión")))
+            page.overlay.append(ft.SnackBar(ft.Text("Debe agregar al menos una partida a la venta"), open=True))
+            page.update()
             return
+        page.show_dialog(dlg_cobro)
+
+    def ejecutar_guardado():
+        cerrar_modal_cobro()
         
         subtotal = sum(p['total_partida'] for p in items_partidas)
         iva = subtotal * 0.16
         total = subtotal + iva
+        
+        folio_completo = f"{dd_tipo_doc.value}-{txt_folio.value}"
 
         datos_remision = {
-            'folio': txt_folio.value,
+            'folio': folio_completo,
             'fecha': txt_fecha.value,
-            'nombre_cliente': txt_cliente.value,
-            'direccion_cliente': txt_direccion.value,
-            'nombre_vendedor': txt_vendedor.value,
-            'especialidades': {
-                'electrofisiologia': False,
-                'radiologia': False,
-                'cardiologia': False,
-                'endovascular': False,
-                'neuromodulacion': False
-            },
+            'nombre_cliente': txt_cobro_cliente.value,
+            'direccion_cliente': "",
+            'nombre_vendedor': cfg_actual.get('vendedor_predeterminado', ''),
+            'condicion': txt_cobro_condicion.value,
+            'observaciones': txt_cobro_observaciones.value,
             'subtotal': subtotal,
             'descuento_pct': 0.0,
             'descuento_monto': 0.0,
             'iva': iva,
             'total': total,
             'total_letra': f"{total:,.2f} PESOS M.N.",
-            'nombre_paciente': "",
-            'nombre_doctor': "",
-            'episodio': "",
-            'aseguradora': "",
-            'diagnostico': "",
-            'agente': txt_vendedor.value,
-            'fecha_pagare': txt_fecha.value
+            'agente': cfg_actual.get('vendedor_predeterminado', '')
         }
 
         out_dir = os.path.dirname(__file__)
-        pdf_path = os.path.join(out_dir, f"{txt_folio.value}.pdf")
+        pdf_path = os.path.join(out_dir, f"TKT-{folio_completo}.pdf")
         
         try:
-            # 1. Guardar en SQLite local (para persistencia y sincronización posterior con SAE)
             ok_db, rem_id, msg_db = db_local.guardar_remision_local(datos_remision, items_partidas)
-            
-            # 2. Generar PDF idéntico a remision.pdf
-            pdf_generator.generar_pdf_remision(datos_remision, items_partidas, pdf_path)
+            pdf_generator.generar_pdf_ticket_58mm(datos_remision, items_partidas, pdf_path)
             
             dlg = ft.AlertDialog(
-                title=ft.Text("Remisión Guardada y PDF Generado"),
-                content=ft.Text(f"La remisión fue registrada localmente en SQLite (ID: {rem_id}) y se generó el PDF:\n{pdf_path}"),
-                actions=[ft.TextButton("OK", on_click=lambda ev: page.pop_dialog())]
+                title=ft.Text("Venta Guardada y Ticket Generado"),
+                content=ft.Text(f"La venta fue registrada localmente en SQLite (ID: {rem_id})."),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda ev: page.pop_dialog())
+                ]
             )
             page.show_dialog(dlg)
+            
+            # Limpiar UI
+            items_partidas.clear()
+            lv_partidas.controls.clear()
+            txt_folio.value = datetime.now().strftime('%d%H%M')
+            txt_cobro_cliente.value = "CLIENTE MOSTR"
+            txt_cobro_condicion.value = "CONTADO"
+            txt_cobro_observaciones.value = ""
+            calcular_totales()
+            
         except Exception as ex:
-            page.overlay.append(ft.SnackBar(ft.Text(f"Error al procesar remisión: {str(ex)}"), open=True))
+            page.overlay.append(ft.SnackBar(ft.Text(f"Error al procesar: {str(ex)}"), open=True))
             page.update()
 
-    # 1. Acordeón para Datos Generales
-    acordeon_cliente = ft.ExpansionTile(
-        title=ft.Text("1. Datos Generales de la Remisión", weight=ft.FontWeight.BOLD, size=16),
-        expanded=True,
-        controls=[
-            ft.Container(padding=10, content=ft.Column([
-                ft.ResponsiveRow([txt_folio, txt_fecha]),
-                ft.ResponsiveRow([txt_cliente, btn_buscar_cliente, txt_vendedor]),
-                ft.ResponsiveRow([txt_direccion])
-            ]))
-        ]
-    )
-
-    # 2. Body Principal Scrolleable
+    # Layout de VISTA 1
     body = ft.Column(
         controls=[
-            ft.Row([
-                ft.Text("REMISIONES Y VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                btn_sync_sae
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            acordeon_cliente,
-            ft.Divider(),
-            ft.Text("2. Buscador y Captura de Productos:", weight=ft.FontWeight.BOLD, size=16),
-            ft.ResponsiveRow([
-                txt_part_cant, txt_part_cve, btn_buscar_producto, 
-                txt_part_alg, txt_part_descr, txt_part_lote, txt_part_precio, 
-                ft.Container(ft.Button("Agregar", icon=ft.Icons.ADD, on_click=agregar_partida_click), col={"md": 2, "xs": 12})
-            ]),
-            ft.Divider(),
-            ft.Text("3. Carrito de Compras:", weight=ft.FontWeight.BOLD, size=16),
+            ft.ResponsiveRow([dd_tipo_doc, txt_folio, txt_fecha]),
+            txt_buscar,
+            ft.Divider(height=1, color=ft.Colors.GREY_300),
             lv_partidas
         ],
         scroll=ft.ScrollMode.AUTO,
         expand=True
     )
 
-    # 3. Sticky Bottom Bar para Totales
     barra_inferior = ft.Container(
-        content=ft.ResponsiveRow([
-            ft.Column([
-                ft.Row([ft.Text("Subtotal:", size=12, color=ft.Colors.GREY_600), lbl_subtotal]),
-                ft.Row([ft.Text("IVA (16%):", size=12, color=ft.Colors.GREY_600), lbl_iva])
-            ], col={"md": 3, "xs": 12}),
-            ft.Column([
-                ft.Text("TOTAL A COBRAR:", size=14, weight=ft.FontWeight.BOLD), lbl_total
-            ], col={"md": 4, "xs": 12}),
-            ft.Column([
-                ft.Button("GUARDAR Y COBRAR", icon=ft.Icons.CHECK_CIRCLE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), on_click=guardar_y_generar_pdf, height=50)
-            ], col={"md": 5, "xs": 12})
-        ]),
+        content=ft.Row([
+            ft.Text("TOTAL A COBRAR:", size=16, weight=ft.FontWeight.BOLD),
+            lbl_total,
+            ft.Container(expand=True),
+            ft.ElevatedButton("GUARDAR Y COBRAR", icon=ft.Icons.CHECK_CIRCLE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), on_click=mostrar_modal_cobro, height=50)
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
         padding=10,
-        bgcolor=ft.Colors.GREY_100,
-        border_radius=8,
-        border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300), bottom=ft.BorderSide(1, ft.Colors.GREY_300), left=ft.BorderSide(1, ft.Colors.GREY_300), right=ft.BorderSide(1, ft.Colors.GREY_300))
+        bgcolor=ft.Colors.WHITE,
+        border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300))
     )
 
     view_remisiones = ft.Container(
-        content=ft.Column([
-            body,
-            barra_inferior
-        ]),
-        padding=10,
+        content=ft.Column([body, barra_inferior]),
+        padding=0,
         expand=True
     )
 
@@ -402,6 +358,7 @@ def main(page: ft.Page):
     txt_cfg_empresa = ft.TextField(label="No. Empresa (ej: 01, 07)", value=cfg_actual.get('empresa', '01'), col={"md": 4, "xs": 12})
     txt_cfg_user = ft.TextField(label="Usuario Firebird", value=cfg_actual.get('user', 'SYSDBA'), col={"md": 6, "xs": 12})
     txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, col={"md": 6, "xs": 12})
+    txt_cfg_vendedor = ft.TextField(label="Vendedor Predeterminado", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 12, "xs": 12})
 
     def guardar_config_click(e):
         nuevos_datos = {
@@ -410,7 +367,8 @@ def main(page: ft.Page):
             'empresa': txt_cfg_empresa.value.strip(),
             'user': txt_cfg_user.value.strip(),
             'password': txt_cfg_password.value.strip(),
-            'charset': 'UTF8'
+            'charset': 'UTF8',
+            'vendedor_predeterminado': txt_cfg_vendedor.value.strip()
         }
         ok, msg = sae_connector.save_config(nuevos_datos)
         page.overlay.append(ft.SnackBar(ft.Text(msg), open=True))
@@ -435,12 +393,121 @@ def main(page: ft.Page):
             ft.ResponsiveRow([txt_cfg_host, txt_cfg_empresa]),
             ft.ResponsiveRow([txt_cfg_database]),
             ft.ResponsiveRow([txt_cfg_user, txt_cfg_password]),
+            ft.ResponsiveRow([txt_cfg_vendedor]),
             ft.Divider(),
             ft.Row([
                 ft.Button("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
                 ft.Button("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click),
             ], wrap=True)
         ], scroll=ft.ScrollMode.AUTO),
+        padding=10,
+        expand=True
+    )
+
+    # ══════════════════════════════════════════════════════════════════════
+    # VISTA 5: HISTORIAL Y SINCRONIZACIÓN
+    # ══════════════════════════════════════════════════════════════════════
+    lv_historial = ft.ListView(expand=True, spacing=5, height=450)
+    
+    def cargar_historial():
+        lv_historial.controls.clear()
+        ventas = db_local.obtener_ventas_historial()
+        
+        def mostrar_detalles_venta(e):
+            rem_id = e.control.data
+            encabezado, partidas = db_local.obtener_venta_completa(rem_id)
+            if not encabezado: return
+            
+            folio = encabezado.get('folio', '')
+            pdf_path = os.path.join(os.path.dirname(__file__), f"TKT-{folio}.pdf")
+            
+            lista_partidas = ft.ListView(spacing=5, height=200)
+            for p in partidas:
+                lista_partidas.controls.append(
+                    ft.Text(f"{p['cantidad']}x {p['cve_producto']} - ${p['total_partida']:,.2f}")
+                )
+                
+            def abrir_pdf(e):
+                if os.path.exists(pdf_path):
+                    os.startfile(pdf_path)
+                else:
+                    page.overlay.append(ft.SnackBar(ft.Text("PDF no encontrado"), open=True))
+                    page.update()
+
+            dlg = ft.AlertDialog(
+                title=ft.Text(f"Detalle de Venta: {folio}"),
+                content=ft.Container(
+                    width=400,
+                    content=ft.Column([
+                        ft.Text(f"Cliente: {encabezado.get('nombre_cliente')}"),
+                        ft.Text(f"Fecha: {encabezado.get('fecha')}"),
+                        ft.Text(f"Total: ${encabezado.get('total', 0):,.2f}", weight=ft.FontWeight.BOLD),
+                        ft.Divider(),
+                        ft.Text("Partidas:", weight=ft.FontWeight.BOLD),
+                        lista_partidas
+                    ], tight=True)
+                ),
+                actions=[
+                    ft.ElevatedButton("Ver PDF", icon=ft.Icons.PICTURE_AS_PDF, on_click=abrir_pdf),
+                    ft.TextButton("Cerrar", on_click=lambda ev: page.pop_dialog())
+                ]
+            )
+            page.show_dialog(dlg)
+
+        for v in ventas:
+            color_estatus = ft.Colors.ORANGE_800 if v['estatus_sync'] == 'PENDIENTE' else ft.Colors.GREEN_700
+            icono_estatus = ft.Icons.PENDING if v['estatus_sync'] == 'PENDIENTE' else ft.Icons.CLOUD_DONE
+            
+            lv_historial.controls.append(
+                ft.ListTile(
+                    leading=ft.Icon(icono_estatus, color=color_estatus),
+                    title=ft.Text(f"{v['folio']} - {v['fecha']}", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(f"Cliente: {v['nombre_cliente']} | Total: ${v['total']:,.2f}"),
+                    trailing=ft.Text(v['estatus_sync'], color=color_estatus, weight=ft.FontWeight.W_500),
+                    data=v['id'],
+                    on_click=mostrar_detalles_venta
+                )
+            )
+        if not ventas:
+            lv_historial.controls.append(ft.Text("No hay ventas registradas en esta terminal.", italic=True))
+        page.update()
+
+    def btn_sincronizar_ventas_click(e):
+        btn_sincronizar_ventas.disabled = True
+        btn_sincronizar_ventas.text = "Sincronizando..."
+        page.update()
+        
+        ok, msg = sae_connector.subir_ventas_pendientes()
+        
+        btn_sincronizar_ventas.disabled = False
+        btn_sincronizar_ventas.text = "Subir Ventas Pendientes a SAE"
+        cargar_historial()
+        
+        icon_t = ft.Icons.CHECK_CIRCLE if ok else ft.Icons.ERROR
+        color_t = ft.Colors.GREEN if ok else ft.Colors.RED
+        dlg = ft.AlertDialog(
+            title=ft.Row([ft.Icon(icon_t, color=color_t), ft.Text("Sincronización de Ventas")]),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("Aceptar", on_click=lambda ev: page.pop_dialog())]
+        )
+        page.show_dialog(dlg)
+
+    btn_sincronizar_ventas = ft.ElevatedButton(
+        "Subir Ventas Pendientes a SAE", 
+        icon=ft.Icons.CLOUD_UPLOAD, 
+        style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_800, color=ft.Colors.WHITE),
+        on_click=btn_sincronizar_ventas_click
+    )
+
+    view_historial = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("HISTORIAL DE VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                btn_sincronizar_ventas
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
+            ft.Divider(),
+            lv_historial
+        ]),
         padding=10,
         expand=True
     )
@@ -462,14 +529,18 @@ def main(page: ft.Page):
             cargar_tabla_productos()
         elif idx == 3:
             body_container.content = view_ajustes
+        elif idx == 4:
+            body_container.content = view_historial
+            cargar_historial()
         page.update()
 
     page.navigation_bar = ft.NavigationBar(
         destinations=[
-            ft.NavigationBarDestination(icon=ft.Icons.RECEIPT_LONG, label="Remisión / Venta"),
+            ft.NavigationBarDestination(icon=ft.Icons.RECEIPT_LONG, label="Venta"),
             ft.NavigationBarDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
             ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
-            ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Ajustes SAE"),
+            ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Ajustes"),
+            ft.NavigationBarDestination(icon=ft.Icons.HISTORY, label="Historial"),
         ],
         selected_index=0,
         on_change=cambiar_pestana

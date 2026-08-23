@@ -11,7 +11,8 @@ DEFAULT_CONFIG = {
     'user': 'SYSDBA',
     'password': 'masterkey',
     'charset': 'UTF8',
-    'empresa': '01'
+    'empresa': '01',
+    'vendedor_predeterminado': ''
 }
 
 def load_config():
@@ -140,3 +141,70 @@ def sync_catalogos_desde_sae():
     except Exception as e:
         msg = f"Error al conectar con SAE Firebird ({tbl_inve}): {str(e)}"
         return False, msg
+
+def subir_ventas_pendientes():
+    """Sincroniza las ventas locales con estatus PENDIENTE hacia la BD de SAE."""
+    import db_local
+    ventas = db_local.obtener_ventas_historial()
+    pendientes = [v for v in ventas if v.get('estatus_sync') == 'PENDIENTE']
+    
+    if not pendientes:
+        return True, "No hay ventas pendientes por sincronizar."
+
+    cfg = load_config()
+    try:
+        fb_conn = firebirdsql.connect(
+            host=cfg.get('host', 'localhost'),
+            database=cfg.get('database', ''),
+            user=cfg.get('user', 'SYSDBA'),
+            password=cfg.get('password', 'masterkey'),
+            charset=cfg.get('charset', 'UTF8')
+        )
+    except Exception as e:
+        return False, f"Error conectando a SAE para subir ventas: {str(e)}"
+    
+    cur_fb = fb_conn.cursor()
+    exitos = 0
+    errores = []
+
+    for v in pendientes:
+        rem_id = v['id']
+        encabezado, partidas = db_local.obtener_venta_completa(rem_id)
+        if not encabezado or not partidas:
+            errores.append(f"Venta {rem_id} sin datos completos.")
+            continue
+            
+        folio = encabezado.get('folio', f"RM-{rem_id}")
+        cve_cliente = encabezado.get('cve_cliente', '')
+        cve_vendedor = encabezado.get('cve_vendedor', '')
+        total = encabezado.get('total', 0.0)
+        
+        # En SAE, las remisiones se guardan en FACTRXX con TIP_DOC = 'R'
+        # o 'V' para Notas de Venta, o 'C' para cotizaciones, dependiendo del tipo.
+        # Aquí asumiremos TIP_DOC = 'V' por ser Notas de Venta.
+        tip_doc = folio[0] if folio and folio[0] in ['V', 'C'] else 'V'
+
+        try:
+            cur_fb.execute("""
+                INSERT INTO FACTR01 (TIP_DOC, CVE_DOC, CVE_CLPV, STATUS, DAT_MOSTR, CVE_VEND, CAN_TOT, IMP_TOT1, FECHA_DOCU)
+                VALUES (?, ?, ?, 'E', 0, ?, ?, 0, CURRENT_DATE)
+            """, (tip_doc, folio, cve_cliente, cve_vendedor, total))
+            
+            for p in partidas:
+                cur_fb.execute("""
+                    INSERT INTO PAR_FACTR01 (CVE_DOC, NUM_PAR, CVE_ART, CANT, PREC, TOT_PARTIDA)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (folio, p.get('num_partida', 1), p.get('cve_producto', ''), p.get('cantidad', 1.0), p.get('precio_unitario', 0.0), p.get('total_partida', 0.0)))
+            
+            fb_conn.commit()
+            db_local.marcar_venta_sincronizada(rem_id)
+            exitos += 1
+        except Exception as ex_v:
+            fb_conn.rollback()
+            errores.append(f"Error en folio {folio}: {str(ex_v)}")
+
+    fb_conn.close()
+    
+    if errores:
+        return False, f"Se sincronizaron {exitos} ventas. Hubo errores:\n" + "\n".join(errores)
+    return True, f"Se sincronizaron {exitos} ventas correctamente."
