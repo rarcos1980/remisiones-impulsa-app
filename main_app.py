@@ -387,6 +387,11 @@ def main(page: ft.Page):
     txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, col={"md": 6, "xs": 12})
     txt_cfg_vendedor = ft.TextField(label="Vendedor Predeterminado", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 6, "xs": 6})
     txt_cfg_almacen = ft.TextField(label="Almacén", value=cfg_actual.get('almacen', '1'), keyboard_type=ft.KeyboardType.NUMBER, col={"md": 6, "xs": 6})
+    
+    txt_cfg_ticket_empresa = ft.TextField(label="Nombre Empresa (Ticket)", value=cfg_actual.get('ticket_empresa', 'MCR IMPULSO'), col={"md": 6, "xs": 12})
+    txt_cfg_ticket_rfc = ft.TextField(label="RFC (Ticket)", value=cfg_actual.get('ticket_rfc', 'RFC: MIM 180215 3ZA'), col={"md": 6, "xs": 12})
+    txt_cfg_ticket_dir = ft.TextField(label="Dirección (Ticket)", value=cfg_actual.get('ticket_dir', 'CAMINO A LOS OLVERA NO. 721\nCOL. LOS OLVERA\nEL PUEBLITO, CORREGIDORA'), multiline=True, min_lines=2, col={"md": 12, "xs": 12})
+    txt_cfg_ticket_tel = ft.TextField(label="Teléfono (Ticket)", value=cfg_actual.get('ticket_tel', 'TEL: (442) 277 8358'), col={"md": 12, "xs": 12})
 
     def guardar_config_click(e):
         nuevos_datos = {
@@ -397,7 +402,11 @@ def main(page: ft.Page):
             'password': txt_cfg_password.value.strip(),
             'charset': 'UTF8',
             'vendedor_predeterminado': txt_cfg_vendedor.value.strip(),
-            'almacen': txt_cfg_almacen.value.strip() or '1'
+            'almacen': txt_cfg_almacen.value.strip() or '1',
+            'ticket_empresa': txt_cfg_ticket_empresa.value.strip(),
+            'ticket_rfc': txt_cfg_ticket_rfc.value.strip(),
+            'ticket_dir': txt_cfg_ticket_dir.value.strip(),
+            'ticket_tel': txt_cfg_ticket_tel.value.strip()
         }
         ok, msg = sae_connector.save_config(nuevos_datos)
         page.overlay.append(ft.SnackBar(ft.Text(msg), open=True))
@@ -423,6 +432,11 @@ def main(page: ft.Page):
             ft.ResponsiveRow([txt_cfg_database]),
             ft.ResponsiveRow([txt_cfg_user, txt_cfg_password]),
             ft.ResponsiveRow([txt_cfg_vendedor, txt_cfg_almacen]),
+            ft.Divider(),
+            ft.Text("DATOS DEL TICKET", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+            ft.ResponsiveRow([txt_cfg_ticket_empresa, txt_cfg_ticket_rfc]),
+            ft.ResponsiveRow([txt_cfg_ticket_dir]),
+            ft.ResponsiveRow([txt_cfg_ticket_tel]),
             ft.Divider(),
             ft.Row([
                 ft.Button("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),

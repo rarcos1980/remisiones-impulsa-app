@@ -321,6 +321,13 @@ def generar_pdf_ticket_58mm(datos_remision, partidas, output_path):
     El ancho total es de aprox. 58mm (164 puntos).
     """
     from reportlab.lib.units import mm
+    import sae_connector
+    
+    cfg = sae_connector.load_config()
+    t_empresa = cfg.get('ticket_empresa', 'MCR IMPULSO')
+    t_rfc = cfg.get('ticket_rfc', 'RFC: MIM 180215 3ZA')
+    t_dir = cfg.get('ticket_dir', 'CAMINO A LOS OLVERA NO. 721\nCOL. LOS OLVERA\nEL PUEBLITO, CORREGIDORA').replace('\n', '<br/>')
+    t_tel = cfg.get('ticket_tel', 'TEL: (442) 277 8358')
     
     ancho_ticket = 58 * mm
     # Altura dinámica: 120 (cabecera) + 80 (totales y pie) + 20 por partida
@@ -346,10 +353,10 @@ def generar_pdf_ticket_58mm(datos_remision, partidas, output_path):
     style_bold_left = ParagraphStyle('BoldLeft', parent=styles['Normal'], fontSize=7, leading=8, fontName='Helvetica-Bold', alignment=0, textColor=colors.black)
     
     # 1. Cabecera
-    story.append(Paragraph("<b>MCR IMPULSO</b>", style_bold_center))
-    story.append(Paragraph("RFC: MIM 180215 3ZA", style_center))
-    story.append(Paragraph("CAMINO A LOS OLVERA NO. 721<br/>COL. LOS OLVERA<br/>EL PUEBLITO, CORREGIDORA", style_center))
-    story.append(Paragraph("TEL: (442) 277 8358", style_center))
+    story.append(Paragraph(f"<b>{t_empresa}</b>", style_bold_center))
+    story.append(Paragraph(t_rfc, style_center))
+    story.append(Paragraph(t_dir, style_center))
+    story.append(Paragraph(t_tel, style_center))
     story.append(Spacer(1, 3*mm))
     
     # 2. Datos de Remisión
