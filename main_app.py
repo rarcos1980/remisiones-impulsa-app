@@ -502,7 +502,7 @@ def main(page: ft.Page):
                 lista_partidas.controls.append(
                     ft.Container(
                         bgcolor=bg,
-                        padding=ft.padding.only(left=5, right=5, top=8, bottom=8),
+                        padding=8,
                         content=ft.Column([
                             ft.Row([
                                 ft.Icon(ft.Icons.INVENTORY_2, size=16, color=ft.Colors.GREY_700),
@@ -561,7 +561,7 @@ def main(page: ft.Page):
                             border=ft.border.all(1, ft.Colors.GREY_300),
                             border_radius=10,
                             padding=15,
-                            margin=ft.margin.only(top=15, bottom=15),
+                            margin=15,
                             content=ft.Row([
                                 ft.Text("Total $", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_700),
                                 ft.Text(f"{total_val:,.0f}", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_800)
