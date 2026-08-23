@@ -369,19 +369,19 @@ def generar_pdf_ticket_58mm(datos_remision, partidas, output_path):
     story.append(Spacer(1, 2*mm))
     story.append(Paragraph("-" * 35, style_center))
     
-    # 3. Partidas (Tabla simplificada)
+    # 3. Partidas (Tabla simplificada 2 renglones)
     data_partidas = []
     for p in partidas:
         cant = f"{p.get('cantidad', 1):.0f}"
-        desc = str(p.get('descripcion', ''))[:15] # Truncar para que quepa
+        desc = str(p.get('descripcion', '')) # Descripción completa
+        pu = f"${p.get('precio_unitario', 0):,.2f}"
         tot = f"${p.get('total_partida', 0):,.2f}"
-        data_partidas.append([
-            Paragraph(f"{cant}x {desc}", style_left),
-            Paragraph(tot, style_right)
-        ])
+        
+        texto_item = f"{desc}<br/><i>{cant} pza x {pu} = <b>{tot}</b></i>"
+        data_partidas.append([ Paragraph(texto_item, style_left) ])
         
     if data_partidas:
-        tbl_partidas = Table(data_partidas, colWidths=[33*mm, 17*mm])
+        tbl_partidas = Table(data_partidas, colWidths=[50*mm])
         tbl_partidas.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('BOTTOMPADDING', (0,0), (-1,-1), 1),

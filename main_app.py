@@ -127,8 +127,7 @@ def main(page: ft.Page):
         tile = ft.Container(
             content=ft.ListTile(
                 title=ft.Text(f"{p['descripcion']} ({p['cve_producto']})", weight=ft.FontWeight.W_500, size=14, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                subtitle=ft.Row([txt_qty, txt_prc], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_400, on_click=btn_eliminar_click)
+                subtitle=ft.Row([txt_qty, txt_prc, ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_400, on_click=btn_eliminar_click)], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER)
             ),
             data=p,
             bgcolor=ft.Colors.GREY_100,
@@ -438,10 +437,10 @@ def main(page: ft.Page):
             ft.ResponsiveRow([txt_cfg_ticket_dir]),
             ft.ResponsiveRow([txt_cfg_ticket_tel]),
             ft.Divider(),
-            ft.Row([
-                ft.Button("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
-                ft.Button("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click),
-            ], wrap=True),
+            ft.ResponsiveRow([
+                ft.Column(col={"xs": 12, "sm": 6}, controls=[ft.ElevatedButton("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click, width=250)]),
+                ft.Column(col={"xs": 12, "sm": 6}, controls=[ft.ElevatedButton("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click, width=250)])
+            ]),
             ft.Divider(),
             ft.Text("MANTENIMIENTO", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
             ft.Text("Para traer los productos y clientes de la base de datos SAE a esta terminal táctil, haga clic en Sincronizar."),
