@@ -73,8 +73,8 @@ def search_clients_dialog(page: ft.Page, on_select_callback):
                 ft.Divider(),
                 lv_resultados
             ]),
-            width=550,
-            height=420
+            width=320,
+            height=400
         ),
         actions=[
             ft.TextButton("Cancelar", on_click=lambda ev: page.pop_dialog())
@@ -155,8 +155,8 @@ def search_products_dialog(page: ft.Page, on_select_callback):
                 ft.Divider(),
                 lv_resultados
             ]),
-            width=580,
-            height=420
+            width=320,
+            height=400
         ),
         actions=[
             ft.TextButton("Cancelar", on_click=lambda ev: page.pop_dialog())

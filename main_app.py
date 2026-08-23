@@ -41,15 +41,8 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 1: CAPTURA DE REMISIONES / VENTAS
     # ══════════════════════════════════════════════════════════════════════
-    # Cabecera Simplificada
-    dd_tipo_doc = ft.Dropdown(
-        label="Tipo",
-        value="V",
-        options=[ft.dropdown.Option("V", "Nota de Venta (V)"), ft.dropdown.Option("C", "Cotización (C)")],
-        col={"md": 3, "xs": 4}
-    )
-    txt_folio = ft.TextField(label="Folio", value=f"221805", col={"md": 5, "xs": 4})
-    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"md": 4, "xs": 4})
+    txt_folio = ft.TextField(label="Folio", value=f"221805", col={"xs": 6})
+    txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"xs": 6})
 
     # Buscador unificado
     def abrir_buscador_producto(e):
@@ -96,8 +89,8 @@ def main(page: ft.Page):
             calcular_totales()
 
         # UI del Item en el carrito
-        txt_qty = ft.TextField(value="1", label="Cant.", width=80, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
-        txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=100, keyboard_type=ft.KeyboardType.NUMBER, dense=True)
+        txt_qty = ft.TextField(value="1", label="Cant.", width=60, keyboard_type=ft.KeyboardType.NUMBER, dense=True, content_padding=5)
+        txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=90, keyboard_type=ft.KeyboardType.NUMBER, dense=True, content_padding=5)
         
         def update_item_totals(e):
             try:
@@ -176,7 +169,7 @@ def main(page: ft.Page):
         iva = subtotal * 0.16
         total = subtotal + iva
         
-        folio_completo = f"{dd_tipo_doc.value}-{txt_folio.value}"
+        folio_completo = f"V-{txt_folio.value}"
 
         datos_remision = {
             'folio': folio_completo,
@@ -227,7 +220,7 @@ def main(page: ft.Page):
     # Layout de VISTA 1
     body = ft.Column(
         controls=[
-            ft.ResponsiveRow([dd_tipo_doc, txt_folio, txt_fecha]),
+            ft.ResponsiveRow([txt_folio, txt_fecha]),
             txt_buscar,
             ft.Divider(height=1, color=ft.Colors.GREY_300),
             lv_partidas
