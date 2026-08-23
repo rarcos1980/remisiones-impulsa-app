@@ -484,7 +484,10 @@ def main(page: ft.Page):
                 
             def abrir_pdf(e):
                 if os.path.exists(pdf_path):
-                    os.startfile(pdf_path)
+                    if hasattr(os, 'startfile'):
+                        os.startfile(pdf_path)
+                    else:
+                        page.launch_url(f"file://{pdf_path}")
                 else:
                     page.overlay.append(ft.SnackBar(ft.Text("PDF no encontrado"), open=True))
                     page.update()
@@ -575,7 +578,10 @@ def main(page: ft.Page):
                                 p.get('precio_unitario', 0)
                             ])
             page.overlay.append(ft.SnackBar(ft.Text(f"Exportado a {out_csv}"), open=True))
-            os.startfile(out_csv)
+            if hasattr(os, 'startfile'):
+                os.startfile(out_csv)
+            else:
+                page.launch_url(f"file://{out_csv}")
         except Exception as ex:
             page.overlay.append(ft.SnackBar(ft.Text(f"Error al exportar: {ex}"), open=True))
         page.update()
