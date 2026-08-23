@@ -475,14 +475,7 @@ def main(page: ft.Page):
             
             folio = encabezado.get('folio', '')
             pdf_path = os.path.join(os.path.dirname(__file__), f"TKT-{folio}.pdf")
-            
-            lista_partidas = ft.ListView(spacing=5, height=200)
-            for p in partidas:
-                lista_partidas.controls.append(
-                    ft.Text(f"{p['cantidad']}x {p['cve_producto']} - ${p['total_partida']:,.2f}")
-                )
-                
-            def abrir_pdf(e):
+            def abrir_pdf(ev):
                 if os.path.exists(pdf_path):
                     if hasattr(os, 'startfile'):
                         os.startfile(pdf_path)
@@ -492,23 +485,99 @@ def main(page: ft.Page):
                     page.overlay.append(ft.SnackBar(ft.Text("PDF no encontrado"), open=True))
                     page.update()
 
-            dlg = ft.AlertDialog(
-                title=ft.Text(f"Detalle de Venta: {folio}"),
-                content=ft.Container(
-                    width=400,
-                    content=ft.Column([
-                        ft.Text(f"Cliente: {encabezado.get('nombre_cliente')}"),
-                        ft.Text(f"Fecha: {encabezado.get('fecha')}"),
-                        ft.Text(f"Total: ${encabezado.get('total', 0):,.2f}", weight=ft.FontWeight.BOLD),
-                        ft.Divider(),
-                        ft.Text("Partidas:", weight=ft.FontWeight.BOLD),
-                        lista_partidas
-                    ], tight=True)
+            def cerrar_modal(ev):
+                page.pop_dialog()
+
+            # --- PRODUCTOS LIST ---
+            lista_partidas = ft.Column(spacing=0)
+            lista_partidas.controls.append(
+                ft.Row([
+                    ft.Text("Cantidad", size=12, color=ft.Colors.GREY_700, expand=1, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Precio $", size=12, color=ft.Colors.GREY_700, expand=1, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Subtotal $", size=12, color=ft.Colors.GREY_700, expand=1, text_align=ft.TextAlign.CENTER),
+                ])
+            )
+            for i, p in enumerate(partidas):
+                bg = ft.Colors.TRANSPARENT if i % 2 == 0 else ft.Colors.GREY_200
+                lista_partidas.controls.append(
+                    ft.Container(
+                        bgcolor=bg,
+                        padding=ft.padding.symmetric(horizontal=5, vertical=8),
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.Icons.INVENTORY_2, size=16, color=ft.Colors.GREY_700),
+                                ft.Text(f"{p['descripcion']}", size=13, weight=ft.FontWeight.W_500, expand=True)
+                            ]),
+                            ft.Row([
+                                ft.Text(f"{p['cantidad']:.0f}", size=13, expand=1, text_align=ft.TextAlign.CENTER),
+                                ft.Text(f"{p['precio_unitario']:,.0f}", size=13, expand=1, text_align=ft.TextAlign.CENTER),
+                                ft.Text(f"{p['total_partida']:,.0f}", size=13, expand=1, text_align=ft.TextAlign.CENTER),
+                            ])
+                        ], spacing=2)
+                    )
+                )
+
+            # --- UI CONTENT ---
+            cliente_nombre = encabezado.get('nombre_cliente') or "Sin información"
+            cliente_dir = encabezado.get('direccion_cliente') or "Sin información"
+            info_adic = encabezado.get('observaciones') or "Sin información"
+            metodo_pago = encabezado.get('condicion') or "EFECTIVO"
+            total_val = encabezado.get('total', 0)
+
+            content_col = ft.Column([
+                # Top bar (Blue)
+                ft.Container(
+                    bgcolor=ft.Colors.LIGHT_BLUE_500,
+                    padding=ft.padding.all(10),
+                    content=ft.Row([
+                        ft.IconButton(ft.Icons.CLOSE, icon_color=ft.Colors.WHITE, on_click=cerrar_modal),
+                        ft.Text("Venta", color=ft.Colors.WHITE, size=20, weight=ft.FontWeight.W_500, expand=True),
+                        ft.IconButton(ft.Icons.PICTURE_AS_PDF, icon_color=ft.Colors.WHITE, on_click=abrir_pdf)
+                    ])
                 ),
-                actions=[
-                    ft.ElevatedButton("Ver PDF", icon=ft.Icons.PICTURE_AS_PDF, on_click=abrir_pdf),
-                    ft.TextButton("Cerrar", on_click=lambda ev: page.pop_dialog())
-                ]
+                # Body
+                ft.Container(
+                    padding=20,
+                    content=ft.Column([
+                        ft.Text("Pagado", color=ft.Colors.GREEN_600, size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+                        ft.Divider(color=ft.Colors.TRANSPARENT, height=5),
+                        ft.Text(f"Folio: {folio}", size=14, color=ft.Colors.GREY_800),
+                        ft.Row([ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.BLACK87), ft.Text(encabezado.get('fecha', ''), size=14, color=ft.Colors.GREY_800)]),
+                        ft.Divider(),
+                        
+                        ft.Text("Nombre del cliente", size=12, color=ft.Colors.GREY_600),
+                        ft.Row([ft.Icon(ft.Icons.PERSON, size=18, color=ft.Colors.BLACK87), ft.Text(cliente_nombre, size=14, color=ft.Colors.GREY_800)]),
+                        ft.Text("Dirección", size=12, color=ft.Colors.GREY_600),
+                        ft.Row([ft.Icon(ft.Icons.LOCATION_ON, size=18, color=ft.Colors.BLACK87), ft.Text(cliente_dir, size=14, color=ft.Colors.GREY_800)]),
+                        ft.Divider(),
+                        
+                        ft.Text("Información Adicional", size=12, color=ft.Colors.GREY_600),
+                        ft.Row([ft.Icon(ft.Icons.INFO_OUTLINE, size=18, color=ft.Colors.BLACK87), ft.Text(info_adic, size=14, color=ft.Colors.GREY_800)]),
+                        ft.Row([ft.Icon(ft.Icons.MONEY, size=18, color=ft.Colors.BLACK87), ft.Text(metodo_pago, size=14, color=ft.Colors.GREY_800)], alignment=ft.MainAxisAlignment.END),
+                        
+                        # Total Box
+                        ft.Container(
+                            bgcolor=ft.Colors.WHITE,
+                            border=ft.border.all(1, ft.Colors.GREY_300),
+                            border_radius=10,
+                            padding=15,
+                            margin=ft.margin.symmetric(vertical=15),
+                            content=ft.Row([
+                                ft.Text("Total $", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_700),
+                                ft.Text(f"{total_val:,.0f}", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_800)
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                        ),
+                        
+                        # Products list section
+                        ft.Text("Lista de productos y servicios", size=14, color=ft.Colors.GREY_700, text_align=ft.TextAlign.CENTER),
+                        lista_partidas
+                    ], spacing=8, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+                )
+            ], spacing=0, scroll=ft.ScrollMode.AUTO)
+
+            dlg = ft.AlertDialog(
+                content_padding=0,
+                content=ft.Container(width=400, height=600, content=content_col)
             )
             page.show_dialog(dlg)
 
