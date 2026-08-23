@@ -94,7 +94,7 @@ def main(page: ft.Page):
             'descripcion': descripcion,
             'lote': '',
             'precio_unitario': pu,
-            'total_partida': pu
+            'total_partida': pu * float(cantidad_agregar)
         }
         items_partidas.append(p)
         
@@ -106,7 +106,8 @@ def main(page: ft.Page):
             calcular_totales()
 
         # UI del Item en el carrito
-        txt_qty = ft.TextField(value="1", label="Cant.", width=60, keyboard_type=ft.KeyboardType.NUMBER, dense=True, content_padding=5)
+        str_cant = str(int(cantidad_agregar)) if float(cantidad_agregar).is_integer() else str(cantidad_agregar)
+        txt_qty = ft.TextField(value=str_cant, label="Cant.", width=60, keyboard_type=ft.KeyboardType.NUMBER, dense=True, content_padding=5)
         txt_prc = ft.TextField(value=f"{pu:.2f}", label="Precio $", width=90, keyboard_type=ft.KeyboardType.NUMBER, dense=True, content_padding=5)
         
         def update_item_totals(e):
