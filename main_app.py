@@ -547,19 +547,55 @@ def main(page: ft.Page):
         )
         page.show_dialog(dlg)
 
+    def btn_exportar_csv_click(e):
+        import csv
+        ventas = db_local.obtener_ventas_historial()
+        fecha_filtro = txt_fecha_csv.value.strip()
+        
+        out_csv = os.path.join(os.path.dirname(__file__), f"ventas_exportadas_{fecha_filtro.replace('/','-')}.csv")
+        try:
+            with open(out_csv, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['CVE_DOC', 'CVE_ART', 'DESCR', 'UNIDAD', 'PRECIO VENTA'])
+                for v in ventas:
+                    # El historial trae la fecha de creación 'fecha'
+                    if fecha_filtro and v['fecha'] != fecha_filtro:
+                        continue
+                        
+                    encabezado, partidas = db_local.obtener_venta_completa(v['id'])
+                    if encabezado and partidas:
+                        for p in partidas:
+                            writer.writerow([
+                                encabezado.get('folio', ''),
+                                p.get('cve_producto', ''),
+                                p.get('descripcion', ''),
+                                p.get('cantidad', 0),
+                                p.get('precio_unitario', 0)
+                            ])
+            page.overlay.append(ft.SnackBar(ft.Text(f"Exportado a {out_csv}"), open=True))
+            os.startfile(out_csv)
+        except Exception as ex:
+            page.overlay.append(ft.SnackBar(ft.Text(f"Error al exportar: {ex}"), open=True))
+        page.update()
+
     btn_sincronizar_ventas = ft.ElevatedButton(
         "Subir Ventas Pendientes a SAE", 
         icon=ft.Icons.CLOUD_UPLOAD, 
         style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_800, color=ft.Colors.WHITE),
         on_click=btn_sincronizar_ventas_click
     )
+    
+    txt_fecha_csv = ft.TextField(label="Fecha (DD/MM/YYYY)", value=datetime.now().strftime("%d/%m/%Y"), width=180, dense=True)
+    btn_exportar_csv = ft.ElevatedButton("Exportar CSV", icon=ft.Icons.DOWNLOAD, on_click=btn_exportar_csv_click, bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE)
 
     view_historial = ft.Container(
         content=ft.Column([
-            ft.Row([
-                ft.Text("HISTORIAL DE VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                btn_sincronizar_ventas
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
+            ft.ResponsiveRow([
+                ft.Column(col={"xs": 12, "sm": 6}, controls=[ft.Text("HISTORIAL DE VENTAS", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)]),
+                ft.Column(col={"xs": 12, "sm": 6}, controls=[btn_sincronizar_ventas])
+            ]),
+            ft.Divider(),
+            ft.Row([txt_fecha_csv, btn_exportar_csv], alignment=ft.MainAxisAlignment.START, wrap=True),
             ft.Divider(),
             lv_historial
         ]),
