@@ -19,6 +19,9 @@ def main(page: ft.Page):
     # Variables de Estado de la Remisión
     items_partidas = []
     
+    # Cargar configuración global al inicio
+    cfg_actual = sae_connector.load_config()
+    
     # Botón de Sincronización SAE
     def ejecutar_sincronizacion(e):
         ok, msg = sae_connector.sync_catalogos_desde_sae()
@@ -375,7 +378,6 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # VISTA 4: AJUSTES Y CONFIGURACIÓN DE BASE DE DATOS SAE
     # ══════════════════════════════════════════════════════════════════════
-    cfg_actual = sae_connector.load_config()
     
     txt_cfg_host = ft.TextField(label="Servidor / Host (IP o localhost)", value=cfg_actual.get('host', 'localhost'), col={"md": 8, "xs": 12})
     txt_cfg_database = ft.TextField(label="Ruta Base de Datos Firebird (.FDB)", value=cfg_actual.get('database', ''), col={"md": 12, "xs": 12})
