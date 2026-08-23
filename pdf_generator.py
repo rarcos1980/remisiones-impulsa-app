@@ -314,3 +314,99 @@ if __name__ == "__main__":
     ]
     pdf_out = os.path.join(os.path.dirname(__file__), "remision_test_generada.pdf")
     generar_pdf_remision(datos_demo, partidas_demo, pdf_out)
+
+def generar_pdf_ticket_58mm(datos_remision, partidas, output_path):
+    """
+    Genera un archivo PDF con formato de ticket para impresora térmica de 58mm.
+    El ancho total es de aprox. 58mm (164 puntos).
+    """
+    from reportlab.lib.units import mm
+    
+    ancho_ticket = 58 * mm
+    # Altura dinámica: 120 (cabecera) + 80 (totales y pie) + 20 por partida
+    alto_ticket = (120 + 80 + (len(partidas) * 15)) * mm
+    
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=(ancho_ticket, alto_ticket),
+        leftMargin=3*mm,
+        rightMargin=3*mm,
+        topMargin=5*mm,
+        bottomMargin=5*mm,
+        showBoundary=0
+    )
+    
+    story = []
+    styles = getSampleStyleSheet()
+    
+    style_center = ParagraphStyle('Center', parent=styles['Normal'], fontSize=7, leading=8, alignment=1, textColor=colors.black)
+    style_left = ParagraphStyle('Left', parent=styles['Normal'], fontSize=7, leading=8, alignment=0, textColor=colors.black)
+    style_right = ParagraphStyle('Right', parent=styles['Normal'], fontSize=7, leading=8, alignment=2, textColor=colors.black)
+    style_bold_center = ParagraphStyle('BoldCenter', parent=styles['Normal'], fontSize=8, leading=9, fontName='Helvetica-Bold', alignment=1, textColor=colors.black)
+    style_bold_left = ParagraphStyle('BoldLeft', parent=styles['Normal'], fontSize=7, leading=8, fontName='Helvetica-Bold', alignment=0, textColor=colors.black)
+    
+    # 1. Cabecera
+    story.append(Paragraph("<b>MCR IMPULSO</b>", style_bold_center))
+    story.append(Paragraph("RFC: MIM 180215 3ZA", style_center))
+    story.append(Paragraph("CAMINO A LOS OLVERA NO. 721<br/>COL. LOS OLVERA<br/>EL PUEBLITO, CORREGIDORA", style_center))
+    story.append(Paragraph("TEL: (442) 277 8358", style_center))
+    story.append(Spacer(1, 3*mm))
+    
+    # 2. Datos de Remisión
+    story.append(Paragraph(f"<b>TICKET VENTA</b>", style_bold_center))
+    story.append(Spacer(1, 1*mm))
+    story.append(Paragraph(f"<b>Folio:</b> {datos_remision.get('folio', '')}", style_left))
+    story.append(Paragraph(f"<b>Fecha:</b> {datos_remision.get('fecha', '')}", style_left))
+    story.append(Paragraph(f"<b>Cliente:</b> {datos_remision.get('nombre_cliente', '')}", style_left))
+    story.append(Paragraph(f"<b>Vend:</b> {datos_remision.get('nombre_vendedor', '')}", style_left))
+    story.append(Spacer(1, 2*mm))
+    story.append(Paragraph("-" * 35, style_center))
+    
+    # 3. Partidas (Tabla simplificada)
+    data_partidas = []
+    for p in partidas:
+        cant = f"{p.get('cantidad', 1):.0f}"
+        desc = str(p.get('descripcion', ''))[:15] # Truncar para que quepa
+        tot = f"${p.get('total_partida', 0):,.2f}"
+        data_partidas.append([
+            Paragraph(f"{cant}x {desc}", style_left),
+            Paragraph(tot, style_right)
+        ])
+        
+    if data_partidas:
+        tbl_partidas = Table(data_partidas, colWidths=[33*mm, 17*mm])
+        tbl_partidas.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+            ('TOPPADDING', (0,0), (-1,-1), 1),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
+        story.append(tbl_partidas)
+        
+    story.append(Paragraph("-" * 35, style_center))
+    
+    # 4. Totales
+    total = datos_remision.get('total', 0.0)
+    data_totales = [
+        [Paragraph("<b>TOTAL:</b>", style_bold_left), Paragraph(f"<b>${total:,.2f}</b>", style_right)]
+    ]
+    tbl_tot = Table(data_totales, colWidths=[20*mm, 30*mm])
+    tbl_tot.setStyle(TableStyle([
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(tbl_tot)
+    story.append(Spacer(1, 4*mm))
+    
+    # 5. Pie de ticket
+    story.append(Paragraph("GRACIAS POR SU COMPRA", style_bold_center))
+    story.append(Spacer(1, 2*mm))
+    story.append(Paragraph("Este documento no es un<br/>comprobante fiscal.", style_center))
+    
+    doc.build(story)
+    print(f"Ticket generado en: {output_path}")
+
+if __name__ == "__main__":
+    pdf_ticket_out = os.path.join(os.path.dirname(__file__), "ticket_test_generado.pdf")
+    generar_pdf_ticket_58mm(datos_demo, partidas_demo, pdf_ticket_out)
