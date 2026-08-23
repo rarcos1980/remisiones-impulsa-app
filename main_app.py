@@ -70,6 +70,20 @@ def main(page: ft.Page):
 
     def agregar_partida_directa(clave, descripcion, precio):
         pu = float(precio or 0)
+        
+        # Verificar si el producto ya está en el carrito
+        for t in lv_partidas.controls:
+            p = t.data
+            if p['cve_producto'] == clave:
+                p['cantidad'] += 1
+                p['total_partida'] = p['cantidad'] * p['precio_unitario']
+                txt_qty = t.content.subtitle.controls[0]
+                txt_qty.value = str(int(p['cantidad']) if p['cantidad'].is_integer() else p['cantidad'])
+                calcular_totales()
+                page.overlay.append(ft.SnackBar(ft.Text(f"Se sumó 1 pieza a: {descripcion}"), open=True, duration=1500))
+                page.update()
+                return
+
         p = {
             'cantidad': 1.0,
             'cve_producto': clave,
@@ -108,8 +122,7 @@ def main(page: ft.Page):
 
         tile = ft.Container(
             content=ft.ListTile(
-                leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.GREY_700, size=30),
-                title=ft.Text(f"{p['descripcion']} ({p['cve_producto']})", weight=ft.FontWeight.W_500, size=14),
+                title=ft.Text(f"{p['descripcion']} ({p['cve_producto']})", weight=ft.FontWeight.W_500, size=14, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 subtitle=ft.Row([txt_qty, txt_prc], wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 trailing=ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_400, on_click=btn_eliminar_click)
             ),
@@ -217,11 +230,10 @@ def main(page: ft.Page):
             page.overlay.append(ft.SnackBar(ft.Text(f"Error al procesar: {str(ex)}"), open=True))
             page.update()
 
-    # Layout de VISTA 1
+    # Layout de VISTA 1 (Carrito)
     body = ft.Column(
         controls=[
             ft.ResponsiveRow([txt_folio, txt_fecha]),
-            txt_buscar,
             ft.Divider(height=1, color=ft.Colors.GREY_300),
             lv_partidas
         ],
@@ -315,11 +327,15 @@ def main(page: ft.Page):
             
             for r in rows:
                 p_cve, p_desc, p_prec, p_exis = r['clave'], r['descripcion'], float(r['precio'] or 0), float(r['existencia'] or 0)
+                def tap_add_product(e, c=p_cve, d=p_desc, p=p_prec):
+                    agregar_partida_directa(c, d, p)
+                
                 lv_productos_cat.controls.append(
                     ft.ListTile(
-                        leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.GREEN_800),
-                        title=ft.Text(f"{p_desc} ({p_cve})", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(f"Precio: ${p_prec:,.2f} | Stock Disponible: {p_exis:.2f}")
+                        leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.BLUE_800),
+                        title=ft.Text(f"{p_desc} ({p_cve})", weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                        subtitle=ft.Text(f"Precio: ${p_prec:,.2f} | Stock: {p_exis:.2f}"),
+                        on_click=tap_add_product
                     )
                 )
         except Exception as ex:
@@ -508,18 +524,21 @@ def main(page: ft.Page):
     # ══════════════════════════════════════════════════════════════════════
     # BARRA DE NAVEGACIÓN MÓVIL (TABS / PESTAÑAS)
     # ══════════════════════════════════════════════════════════════════════
-    body_container = ft.Container(content=view_remisiones, expand=True)
+    body_container = ft.Container(content=view_productos, expand=True)
+    
+    # Cargar por defecto el catálogo
+    cargar_tabla_productos()
 
     def cambiar_pestana(e):
         idx = e.control.selected_index
         if idx == 0:
-            body_container.content = view_remisiones
-        elif idx == 1:
-            body_container.content = view_clientes
-            cargar_tabla_clientes()
-        elif idx == 2:
             body_container.content = view_productos
             cargar_tabla_productos()
+        elif idx == 1:
+            body_container.content = view_remisiones
+        elif idx == 2:
+            body_container.content = view_clientes
+            cargar_tabla_clientes()
         elif idx == 3:
             body_container.content = view_ajustes
         elif idx == 4:
@@ -529,9 +548,9 @@ def main(page: ft.Page):
 
     page.navigation_bar = ft.NavigationBar(
         destinations=[
-            ft.NavigationBarDestination(icon=ft.Icons.RECEIPT_LONG, label="Venta"),
+            ft.NavigationBarDestination(icon=ft.Icons.SEARCH, label="Catálogo"),
+            ft.NavigationBarDestination(icon=ft.Icons.SHOPPING_CART, label="Carrito"),
             ft.NavigationBarDestination(icon=ft.Icons.PEOPLE, label="Clientes"),
-            ft.NavigationBarDestination(icon=ft.Icons.INVENTORY, label="Inventario"),
             ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Ajustes"),
             ft.NavigationBarDestination(icon=ft.Icons.HISTORY, label="Historial"),
         ],
