@@ -68,24 +68,24 @@ def main(page: ft.Page):
         lbl_total.value = f"${total:,.2f}"
         page.update()
 
-    def agregar_partida_directa(clave, descripcion, precio):
+    def agregar_partida_directa(clave, descripcion, precio, cantidad_agregar=1.0):
         pu = float(precio or 0)
         
         # Verificar si el producto ya está en el carrito
         for t in lv_partidas.controls:
             p = t.data
             if p['cve_producto'] == clave:
-                p['cantidad'] += 1
+                p['cantidad'] += cantidad_agregar
                 p['total_partida'] = p['cantidad'] * p['precio_unitario']
                 txt_qty = t.content.subtitle.controls[0]
                 txt_qty.value = str(int(p['cantidad']) if p['cantidad'].is_integer() else p['cantidad'])
                 calcular_totales()
-                page.overlay.append(ft.SnackBar(ft.Text(f"Se sumó 1 pieza a: {descripcion}"), open=True, duration=1500))
+                page.overlay.append(ft.SnackBar(ft.Text(f"Se sumó {cantidad_agregar} pieza(s) a: {descripcion}"), open=True, duration=1500))
                 page.update()
                 return
 
         p = {
-            'cantidad': 1.0,
+            'cantidad': float(cantidad_agregar),
             'cve_producto': clave,
             'alg': '',
             'descripcion': descripcion,
@@ -136,7 +136,8 @@ def main(page: ft.Page):
 
     # MODAL DE COBRO
     txt_cobro_cliente = ft.TextField(label="Cliente", value="CLIENTE MOSTR", col={"md": 10, "xs": 10})
-    txt_cobro_condicion = ft.TextField(label="Condición", value="CONTADO", col={"md": 12, "xs": 12})
+    txt_cobro_condicion = ft.TextField(label="Condición", value="CONTADO", col={"md": 6, "xs": 6})
+    txt_cobro_vendedor = ft.TextField(label="Vendedor", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 6, "xs": 6})
     txt_cobro_observaciones = ft.TextField(label="Observaciones", multiline=True, min_lines=2, col={"md": 12, "xs": 12})
 
     def abrir_buscador_cliente_modal(e):
@@ -154,7 +155,7 @@ def main(page: ft.Page):
             width=400,
             content=ft.Column([
                 ft.ResponsiveRow([txt_cobro_cliente, btn_buscar_cliente_modal]),
-                ft.ResponsiveRow([txt_cobro_condicion]),
+                ft.ResponsiveRow([txt_cobro_condicion, txt_cobro_vendedor]),
                 ft.ResponsiveRow([txt_cobro_observaciones])
             ], tight=True)
         ),
@@ -189,7 +190,7 @@ def main(page: ft.Page):
             'fecha': txt_fecha.value,
             'nombre_cliente': txt_cobro_cliente.value,
             'direccion_cliente': "",
-            'nombre_vendedor': cfg_actual.get('vendedor_predeterminado', ''),
+            'nombre_vendedor': txt_cobro_vendedor.value,
             'condicion': txt_cobro_condicion.value,
             'observaciones': txt_cobro_observaciones.value,
             'subtotal': subtotal,
@@ -198,7 +199,8 @@ def main(page: ft.Page):
             'iva': iva,
             'total': total,
             'total_letra': f"{total:,.2f} PESOS M.N.",
-            'agente': cfg_actual.get('vendedor_predeterminado', '')
+            'agente': txt_cobro_vendedor.value,
+            'almacen': cfg_actual.get('almacen', '1')
         }
 
         out_dir = os.path.dirname(__file__)
@@ -330,12 +332,30 @@ def main(page: ft.Page):
                 def tap_add_product(e, c=p_cve, d=p_desc, p=p_prec):
                     agregar_partida_directa(c, d, p)
                 
+                def long_press_product(e, c=p_cve, d=p_desc, p=p_prec):
+                    txt_qty_manual = ft.TextField(label="Cantidad", value="1", keyboard_type=ft.KeyboardType.NUMBER, autofocus=True)
+                    def add_manual(ev):
+                        try:
+                            q = float(txt_qty_manual.value)
+                            if q > 0:
+                                agregar_partida_directa(c, d, p, cantidad_agregar=q)
+                            page.pop_dialog()
+                        except:
+                            pass
+                    dlg = ft.AlertDialog(
+                        title=ft.Text(f"Cantidad para {d}"),
+                        content=txt_qty_manual,
+                        actions=[ft.TextButton("Agregar", on_click=add_manual)]
+                    )
+                    page.show_dialog(dlg)
+                
                 lv_productos_cat.controls.append(
                     ft.ListTile(
                         leading=ft.Icon(ft.Icons.INVENTORY_2, color=ft.Colors.BLUE_800),
                         title=ft.Text(f"{p_desc} ({p_cve})", weight=ft.FontWeight.BOLD, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         subtitle=ft.Text(f"Precio: ${p_prec:,.2f} | Stock: {p_exis:.2f}"),
-                        on_click=tap_add_product
+                        on_click=tap_add_product,
+                        on_long_press=long_press_product
                     )
                 )
         except Exception as ex:
@@ -346,11 +366,6 @@ def main(page: ft.Page):
 
     view_productos = ft.Container(
         content=ft.Column([
-            ft.Row([
-                ft.Text("CATÁLOGO DE INVENTARIO (SAE)", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                btn_sync_sae
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            ft.Divider(),
             ft.Row([txt_filtro_prod, ft.IconButton(icon=ft.Icons.REFRESH, tooltip="Actualizar Lista", on_click=cargar_tabla_productos)]),
             lv_productos_cat
         ]),
@@ -367,7 +382,8 @@ def main(page: ft.Page):
     txt_cfg_empresa = ft.TextField(label="No. Empresa (ej: 01, 07)", value=cfg_actual.get('empresa', '01'), col={"md": 4, "xs": 12})
     txt_cfg_user = ft.TextField(label="Usuario Firebird", value=cfg_actual.get('user', 'SYSDBA'), col={"md": 6, "xs": 12})
     txt_cfg_password = ft.TextField(label="Contraseña", value=cfg_actual.get('password', 'masterkey'), password=True, can_reveal_password=True, col={"md": 6, "xs": 12})
-    txt_cfg_vendedor = ft.TextField(label="Vendedor Predeterminado", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 12, "xs": 12})
+    txt_cfg_vendedor = ft.TextField(label="Vendedor Predeterminado", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 6, "xs": 6})
+    txt_cfg_almacen = ft.TextField(label="Almacén", value=cfg_actual.get('almacen', '1'), keyboard_type=ft.KeyboardType.NUMBER, col={"md": 6, "xs": 6})
 
     def guardar_config_click(e):
         nuevos_datos = {
@@ -377,7 +393,8 @@ def main(page: ft.Page):
             'user': txt_cfg_user.value.strip(),
             'password': txt_cfg_password.value.strip(),
             'charset': 'UTF8',
-            'vendedor_predeterminado': txt_cfg_vendedor.value.strip()
+            'vendedor_predeterminado': txt_cfg_vendedor.value.strip(),
+            'almacen': txt_cfg_almacen.value.strip() or '1'
         }
         ok, msg = sae_connector.save_config(nuevos_datos)
         page.overlay.append(ft.SnackBar(ft.Text(msg), open=True))
@@ -402,12 +419,16 @@ def main(page: ft.Page):
             ft.ResponsiveRow([txt_cfg_host, txt_cfg_empresa]),
             ft.ResponsiveRow([txt_cfg_database]),
             ft.ResponsiveRow([txt_cfg_user, txt_cfg_password]),
-            ft.ResponsiveRow([txt_cfg_vendedor]),
+            ft.ResponsiveRow([txt_cfg_vendedor, txt_cfg_almacen]),
             ft.Divider(),
             ft.Row([
                 ft.Button("Probar Conexión", icon=ft.Icons.NETWORK_CHECK, on_click=probar_conexion_click),
                 ft.Button("Guardar Configuración", icon=ft.Icons.SAVE, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700), on_click=guardar_config_click),
-            ], wrap=True)
+            ], wrap=True),
+            ft.Divider(),
+            ft.Text("MANTENIMIENTO", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+            ft.Text("Para traer los productos y clientes de la base de datos SAE a esta terminal táctil, haga clic en Sincronizar."),
+            btn_sync_sae
         ], scroll=ft.ScrollMode.AUTO),
         padding=10,
         expand=True
