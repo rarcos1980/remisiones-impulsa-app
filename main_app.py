@@ -48,9 +48,10 @@ def main(page: ft.Page):
     txt_fecha = ft.TextField(label="Fecha", value=datetime.now().strftime("%d/%m/%Y"), col={"xs": 6})
 
     # Buscador unificado
+    # Buscador unificado
     def abrir_buscador_producto(e):
-        def producto_seleccionado(clave, descripcion, precio):
-            agregar_partida_directa(clave, descripcion, precio)
+        def producto_seleccionado(clave, descripcion, precio, cve_esqimpu):
+            agregar_partida_directa(clave, descripcion, precio, 1.0, cve_esqimpu)
         search_dialogs.search_products_dialog(page, producto_seleccionado)
 
     txt_buscar = ft.TextField(
@@ -65,14 +66,34 @@ def main(page: ft.Page):
     lv_partidas = ft.Column(spacing=0)
 
     def calcular_totales():
-        subtotal = sum(p['total_partida'] for p in items_partidas)
-        iva = subtotal * 0.16
-        total = subtotal + iva
+        subtotal = 0.0
+        total_iva = 0.0
+        for p in items_partidas:
+            subtotal += p['total_partida']
+            total_iva += p['iva_monto']
+            
+        total = subtotal + total_iva
         lbl_total.value = f"${total:,.2f}"
         page.update()
+        return subtotal, total_iva, total
 
-    def agregar_partida_directa(clave, descripcion, precio, cantidad_agregar=1.0):
+    def agregar_partida_directa(clave, descripcion, precio, cantidad_agregar=1.0, cve_esqimpu=1):
         pu = float(precio or 0)
+        
+        # Obtener tasa de impuesto (IVA) del esquema
+        tasa_iva = 0.16
+        try:
+            import sqlite3
+            db_path = os.path.join(os.path.dirname(__file__), "remisiones_local.db")
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            cur.execute("SELECT impuesto1 FROM esquemas_impuestos WHERE cve_esquema = ?", (cve_esqimpu,))
+            row = cur.fetchone()
+            if row:
+                tasa_iva = float(row[0] or 0) / 100.0
+            conn.close()
+        except Exception:
+            pass
         
         # Verificar si el producto ya está en el carrito
         for t in lv_partidas.controls:
@@ -80,6 +101,7 @@ def main(page: ft.Page):
             if p['cve_producto'] == clave:
                 p['cantidad'] += cantidad_agregar
                 p['total_partida'] = p['cantidad'] * p['precio_unitario']
+                p['iva_monto'] = p['total_partida'] * p['tasa_iva']
                 txt_qty = t.content.subtitle.controls[0]
                 txt_qty.value = str(int(p['cantidad']) if p['cantidad'].is_integer() else p['cantidad'])
                 calcular_totales()
@@ -87,6 +109,7 @@ def main(page: ft.Page):
                 page.update()
                 return
 
+        total_partida = pu * float(cantidad_agregar)
         p = {
             'cantidad': float(cantidad_agregar),
             'cve_producto': clave,
@@ -94,7 +117,10 @@ def main(page: ft.Page):
             'descripcion': descripcion,
             'lote': '',
             'precio_unitario': pu,
-            'total_partida': pu * float(cantidad_agregar)
+            'total_partida': total_partida,
+            'cve_esqimpu': cve_esqimpu,
+            'tasa_iva': tasa_iva,
+            'iva_monto': total_partida * tasa_iva
         }
         items_partidas.append(p)
         
@@ -117,6 +143,7 @@ def main(page: ft.Page):
                 p['cantidad'] = new_cant
                 p['precio_unitario'] = new_pu
                 p['total_partida'] = new_cant * new_pu
+                p['iva_monto'] = p['total_partida'] * p.get('tasa_iva', 0.16)
                 calcular_totales()
             except ValueError:
                 pass
@@ -182,9 +209,8 @@ def main(page: ft.Page):
     def ejecutar_guardado():
         cerrar_modal_cobro()
         
-        subtotal = sum(p['total_partida'] for p in items_partidas)
-        iva = subtotal * 0.16
-        total = subtotal + iva
+        subtotal, total_iva, total = calcular_totales()
+        iva = total_iva
         
         folio_completo = f"V-{txt_folio.value}"
 

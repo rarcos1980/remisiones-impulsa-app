@@ -33,7 +33,8 @@ def init_db():
             descripcion TEXT NOT NULL,
             precio REAL DEFAULT 0.0,
             existencia REAL DEFAULT 0.0,
-            linea TEXT
+            linea TEXT,
+            cve_esqimpu INTEGER DEFAULT 1
         )
     """)
 
@@ -59,6 +60,18 @@ def init_db():
     """)
 
     # 5. Tabla de Vendedores
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS esquemas_impuestos (
+            cve_esquema INTEGER PRIMARY KEY,
+            descripcion TEXT,
+            impuesto1 REAL DEFAULT 0.0,
+            impuesto2 REAL DEFAULT 0.0,
+            impuesto3 REAL DEFAULT 0.0,
+            impuesto4 REAL DEFAULT 0.0
+        )
+    """)
+    
+    # 6. Tabla de Vendedores
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS vendedores (
             clave TEXT PRIMARY KEY,
@@ -131,6 +144,8 @@ def init_db():
             cantidad REAL,
             precio_unitario REAL,
             total_partida REAL,
+            iva_monto REAL DEFAULT 0.0,
+            cve_esqimpu INTEGER DEFAULT 1,
             FOREIGN KEY (remision_id) REFERENCES remisiones(id) ON DELETE CASCADE
         )
     """)
@@ -206,8 +221,8 @@ def guardar_remision_local(datos_remision, partidas):
         for p in partidas:
             cur.execute("""
                 INSERT INTO remision_partidas (
-                    remision_id, num_partida, cve_producto, alg, descripcion, lote, cantidad, precio_unitario, total_partida
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    remision_id, num_partida, cve_producto, alg, descripcion, lote, cantidad, precio_unitario, total_partida, iva_monto, cve_esqimpu
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 remision_id,
                 num_part,
@@ -217,7 +232,9 @@ def guardar_remision_local(datos_remision, partidas):
                 p.get('lote', ''),
                 p.get('cantidad', 1.0),
                 p.get('precio_unitario', 0.0),
-                p.get('total_partida', 0.0)
+                p.get('total_partida', 0.0),
+                p.get('iva_monto', 0.0),
+                p.get('cve_esqimpu', 1)
             ))
             num_part += 1
             

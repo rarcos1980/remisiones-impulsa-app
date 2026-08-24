@@ -109,13 +109,13 @@ def search_products_dialog(page: ft.Page, on_select_callback):
             cur = conn.cursor()
             if filtro:
                 cur.execute("""
-                    SELECT clave, descripcion, precio, existencia 
+                    SELECT clave, descripcion, precio, existencia, cve_esqimpu 
                     FROM productos 
                     WHERE clave LIKE ? OR UPPER(descripcion) LIKE UPPER(?) 
                     LIMIT 30
                 """, (f"%{filtro}%", f"%{filtro}%"))
             else:
-                cur.execute("SELECT clave, descripcion, precio, existencia FROM productos LIMIT 30")
+                cur.execute("SELECT clave, descripcion, precio, existencia, cve_esqimpu FROM productos LIMIT 30")
             
             rows = cur.fetchall()
             conn.close()
@@ -126,10 +126,10 @@ def search_products_dialog(page: ft.Page, on_select_callback):
                 )
             else:
                 for r in rows:
-                    clave, descr, precio, exist = r[0], r[1], float(r[2] or 0), float(r[3] or 0)
+                    clave, descr, precio, exist, cve_esq = r[0], r[1], float(r[2] or 0), float(r[3] or 0), int(r[4] or 1)
                     
-                    def seleccionar(ev, c=clave, d=descr, p=precio):
-                        on_select_callback(c, d, p)
+                    def seleccionar(ev, c=clave, d=descr, p=precio, esq=cve_esq):
+                        on_select_callback(c, d, p, esq)
                         page.pop_dialog()
 
                     lv_resultados.controls.append(

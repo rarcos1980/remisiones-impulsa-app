@@ -90,19 +90,38 @@ def sync_catalogos_desde_sae():
                     direccion=excluded.direccion
             """, (clave, nombre, rfc, direccion))
 
+        # 1.5 Sync Esquemas de Impuestos
+        tbl_impu = f"IMPU{emp}"
+        try:
+            cur_fb.execute(f"SELECT CVE_ESQIMPU, TRIM(DESCRIPESQ), IMPUESTO1, IMPUESTO2, IMPUESTO3, IMPUESTO4 FROM {tbl_impu}")
+            impuestos_fb = cur_fb.fetchall()
+            for imp in impuestos_fb:
+                cve, descr, imp1, imp2, imp3, imp4 = imp[0], imp[1], float(imp[2] or 0), float(imp[3] or 0), float(imp[4] or 0), float(imp[5] or 0)
+                cur_sq.execute("""
+                    INSERT INTO esquemas_impuestos (cve_esquema, descripcion, impuesto1, impuesto2, impuesto3, impuesto4)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(cve_esquema) DO UPDATE SET
+                        descripcion=excluded.descripcion,
+                        impuesto1=excluded.impuesto1, impuesto2=excluded.impuesto2,
+                        impuesto3=excluded.impuesto3, impuesto4=excluded.impuesto4
+                """, (cve, descr, imp1, imp2, imp3, imp4))
+        except Exception as e_impu:
+            print(f"Error sincronizando impuestos: {e_impu}")
+
         # 2. Sync Productos e Importar Precios
-        cur_fb.execute(f"SELECT TRIM(CVE_ART), TRIM(DESCR), EXIST FROM {tbl_inve} WHERE STATUS = 'A'")
+        cur_fb.execute(f"SELECT TRIM(CVE_ART), TRIM(DESCR), EXIST, CVE_ESQIMPU FROM {tbl_inve} WHERE STATUS = 'A'")
         productos_fb = cur_fb.fetchall()
         for p in productos_fb:
-            clave, descr, exist = p[0], p[1], float(p[2] or 0.0)
+            clave, descr, exist, cve_esq = p[0], p[1], float(p[2] or 0.0), int(p[3] or 1)
             precio = 0.0
             cur_sq.execute("""
-                INSERT INTO productos (clave, descripcion, precio, existencia)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO productos (clave, descripcion, precio, existencia, cve_esqimpu)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(clave) DO UPDATE SET
                     descripcion=excluded.descripcion,
-                    existencia=excluded.existencia
-            """, (clave, descr, precio, exist))
+                    existencia=excluded.existencia,
+                    cve_esqimpu=excluded.cve_esqimpu
+            """, (clave, descr, precio, exist, cve_esq))
 
         # 2.1 Sync Lista de Precios (PRECIO_X_PROD)
         tbl_precio = f"PRECIO_X_PROD{emp}"
