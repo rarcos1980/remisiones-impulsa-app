@@ -584,7 +584,12 @@ def main(page: ft.Page):
                         # Total Box
                         ft.Container(
                             bgcolor=ft.Colors.WHITE,
-                            border=ft.border.all(1, ft.Colors.GREY_300),
+                            border=ft.Border(
+                                top=ft.BorderSide(1, ft.Colors.GREY_300),
+                                bottom=ft.BorderSide(1, ft.Colors.GREY_300),
+                                left=ft.BorderSide(1, ft.Colors.GREY_300),
+                                right=ft.BorderSide(1, ft.Colors.GREY_300)
+                            ),
                             border_radius=10,
                             padding=15,
                             margin=15,
