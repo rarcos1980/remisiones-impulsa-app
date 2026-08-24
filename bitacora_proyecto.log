@@ -1,0 +1,1 @@
+[2026-08-24 11:07:00] | CORRECCIÓN DE BUG | main_app.py | Se reemplazó ft.padding.all(10) por 10 debido a incompatibilidad de atributo en la versión de Flet usada para empaquetar APK (AttributeError).

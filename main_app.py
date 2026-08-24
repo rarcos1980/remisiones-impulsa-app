@@ -528,7 +528,7 @@ def main(page: ft.Page):
                 # Top bar (Blue)
                 ft.Container(
                     bgcolor=ft.Colors.LIGHT_BLUE_500,
-                    padding=ft.padding.all(10),
+                    padding=10,
                     content=ft.Row([
                         ft.IconButton(ft.Icons.CLOSE, icon_color=ft.Colors.WHITE, on_click=cerrar_modal),
                         ft.Text("Venta", color=ft.Colors.WHITE, size=20, weight=ft.FontWeight.W_500, expand=True),
