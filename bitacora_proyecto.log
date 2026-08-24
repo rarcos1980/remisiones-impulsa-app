@@ -1,1 +1,2 @@
 [2026-08-24 11:07:00] | CORRECCIÓN DE BUG | main_app.py | Se reemplazó ft.padding.all(10) por 10 debido a incompatibilidad de atributo en la versión de Flet usada para empaquetar APK (AttributeError).
+[2026-08-24 11:23:00] | NUEVA FUNCIONALIDAD | db_local.py, main_app.py, search_dialogs.py, sae_connector.py | Se implementó el soporte para Esquemas de Impuestos dinámicos basados en la tabla IMPUXX de SAE (CVE_ESQIMPU). Cálculo individualizado por partida en carrito y sincronización offline nativa.
