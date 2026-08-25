@@ -191,7 +191,7 @@ def main(page: ft.Page):
             ft.TextButton("Cancelar", on_click=lambda e: cerrar_modal_cobro()),
             ft.ElevatedButton("Confirmar Cobro", bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE, on_click=lambda e: ejecutar_guardado())
         ],
-        actions_alignment=ft.MainAxisAlignment.END,
+        actions_alignment=ft.MainAxisAlignment.CENTER,
     )
 
     def cerrar_modal_cobro():
@@ -280,12 +280,13 @@ def main(page: ft.Page):
     )
 
     barra_inferior = ft.Container(
-        content=ft.Row([
-            ft.Text("TOTAL A COBRAR:", size=16, weight=ft.FontWeight.BOLD),
-            lbl_total,
-            ft.Container(expand=True),
-            ft.ElevatedButton("GUARDAR Y COBRAR", icon=ft.Icons.CHECK_CIRCLE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), on_click=mostrar_modal_cobro, height=50)
-        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+        content=ft.Column([
+            ft.Row([
+                ft.Text("TOTAL A COBRAR:", size=16, weight=ft.FontWeight.BOLD),
+                lbl_total
+            ], alignment=ft.MainAxisAlignment.CENTER),
+            ft.ElevatedButton("GUARDAR Y COBRAR", icon=ft.Icons.CHECK_CIRCLE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), on_click=mostrar_modal_cobro, height=50, width=300)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
         padding=10,
         bgcolor=ft.Colors.WHITE,
         border=ft.Border(top=ft.BorderSide(1, ft.Colors.GREY_300))
