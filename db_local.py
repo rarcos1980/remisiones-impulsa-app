@@ -259,6 +259,19 @@ def obtener_ventas_historial():
     finally:
         conn.close()
 
+def generar_corte_dia(fecha_str):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT condicion, COUNT(id) as total_ventas, SUM(total) as suma_total FROM remisiones WHERE fecha = ? GROUP BY condicion", (fecha_str,))
+        rows = cur.fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"Error al generar corte: {e}")
+        return []
+    finally:
+        conn.close()
+
 def obtener_venta_completa(remision_id):
     conn = get_connection()
     cur = conn.cursor()

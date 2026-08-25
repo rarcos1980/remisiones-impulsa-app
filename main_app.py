@@ -165,7 +165,18 @@ def main(page: ft.Page):
 
     # MODAL DE COBRO
     txt_cobro_cliente = ft.TextField(label="Cliente", value="CLIENTE MOSTR", col={"md": 10, "xs": 10})
-    txt_cobro_condicion = ft.TextField(label="Condición", value="CONTADO", col={"md": 6, "xs": 6})
+    dd_cobro_condicion = ft.Dropdown(
+        label="Forma de Pago (Condición)", 
+        value="EFECTIVO", 
+        col={"md": 6, "xs": 6},
+        options=[
+            ft.dropdown.Option("EFECTIVO"),
+            ft.dropdown.Option("TARJETA CREDITO"),
+            ft.dropdown.Option("TARJETA DEBITO"),
+            ft.dropdown.Option("TRANSFERENCIA"),
+            ft.dropdown.Option("CREDITO")
+        ]
+    )
     txt_cobro_vendedor = ft.TextField(label="Vendedor", value=cfg_actual.get('vendedor_predeterminado', ''), col={"md": 6, "xs": 6})
     txt_cobro_observaciones = ft.TextField(label="Observaciones", multiline=True, min_lines=2, col={"md": 12, "xs": 12})
 
@@ -183,7 +194,7 @@ def main(page: ft.Page):
             width=400,
             content=ft.Column([
                 ft.ResponsiveRow([txt_cobro_cliente, btn_buscar_cliente_modal]),
-                ft.ResponsiveRow([txt_cobro_condicion, txt_cobro_vendedor]),
+                ft.ResponsiveRow([dd_cobro_condicion, txt_cobro_vendedor]),
                 ft.ResponsiveRow([txt_cobro_observaciones])
             ], tight=True)
         ),
@@ -218,7 +229,7 @@ def main(page: ft.Page):
             'nombre_cliente': txt_cobro_cliente.value,
             'direccion_cliente': "",
             'nombre_vendedor': txt_cobro_vendedor.value,
-            'condicion': txt_cobro_condicion.value,
+            'condicion': dd_cobro_condicion.value,
             'observaciones': txt_cobro_observaciones.value,
             'subtotal': subtotal,
             'descuento_pct': 0.0,
@@ -260,7 +271,7 @@ def main(page: ft.Page):
             lv_partidas.controls.clear()
             txt_folio.value = datetime.now().strftime('%d%H%M')
             txt_cobro_cliente.value = "CLIENTE MOSTR"
-            txt_cobro_condicion.value = "CONTADO"
+            dd_cobro_condicion.value = "EFECTIVO"
             txt_cobro_observaciones.value = ""
             calcular_totales()
             
@@ -709,6 +720,44 @@ def main(page: ft.Page):
     txt_fecha_csv = ft.TextField(label="Fecha (DD/MM/YYYY)", value=datetime.now().strftime("%d/%m/%Y"), width=180, dense=True)
     btn_exportar_csv = ft.ElevatedButton("Exportar CSV", icon=ft.Icons.DOWNLOAD, on_click=btn_exportar_csv_click, bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE)
 
+    def btn_corte_dia_click(e):
+        fecha = txt_fecha_csv.value
+        corte_datos = db_local.generar_corte_dia(fecha)
+        
+        if not corte_datos:
+            page.show_dialog(ft.AlertDialog(title=ft.Text("Corte del Día"), content=ft.Text("No hay ventas registradas en esta fecha.")))
+            return
+            
+        total_global = sum(c['suma_total'] for c in corte_datos)
+        
+        filas = []
+        for c in corte_datos:
+            filas.append(
+                ft.Row([
+                    ft.Text(f"{c['condicion']}:", weight=ft.FontWeight.BOLD, expand=1),
+                    ft.Text(f"{c['total_ventas']} ventas", color=ft.Colors.GREY_600),
+                    ft.Text(f"${c['suma_total']:,.2f}", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            )
+            
+        filas.append(ft.Divider())
+        filas.append(
+            ft.Row([
+                ft.Text("TOTAL DEL DÍA:", weight=ft.FontWeight.BOLD, expand=1),
+                ft.Text(f"${total_global:,.2f}", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        )
+        
+        dlg_corte = ft.AlertDialog(
+            title=ft.Text(f"Corte de Caja - {fecha}"),
+            content=ft.Column(filas, tight=True),
+            actions=[ft.TextButton("Aceptar", on_click=lambda e: page.pop_dialog())],
+            actions_alignment=ft.MainAxisAlignment.CENTER
+        )
+        page.show_dialog(dlg_corte)
+
+    btn_corte_dia = ft.ElevatedButton("Corte del Día", icon=ft.Icons.POINT_OF_SALE, on_click=btn_corte_dia_click, bgcolor=ft.Colors.ORANGE_700, color=ft.Colors.WHITE)
+
     view_historial = ft.Container(
         content=ft.Column([
             ft.ResponsiveRow([
@@ -716,7 +765,7 @@ def main(page: ft.Page):
                 ft.Column(col={"xs": 12, "sm": 6}, controls=[btn_sincronizar_ventas])
             ]),
             ft.Divider(),
-            ft.Row([txt_fecha_csv, btn_exportar_csv], alignment=ft.MainAxisAlignment.START, wrap=True),
+            ft.Row([txt_fecha_csv, btn_exportar_csv, btn_corte_dia], alignment=ft.MainAxisAlignment.START, wrap=True),
             ft.Divider(),
             lv_historial
         ]),
