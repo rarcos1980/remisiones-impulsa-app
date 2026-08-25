@@ -50,9 +50,8 @@ def main(page: ft.Page):
     # Buscador unificado
     # Buscador unificado
     def abrir_buscador_producto(e):
-        def producto_seleccionado(clave, descripcion, precio, cve_esqimpu):
-            agregar_partida_directa(clave, descripcion, precio, 1.0, cve_esqimpu)
-        search_dialogs.search_products_dialog(page, producto_seleccionado)
+        page.overlay.append(ft.SnackBar(ft.Text("Selecciona los productos desde el Catálogo"), open=True, duration=2000))
+        ir_a_pestana(0) # 0 = Pestaña de Catálogo
 
     txt_buscar = ft.TextField(
         label="Buscar Producto / Insumo", 
@@ -171,12 +170,11 @@ def main(page: ft.Page):
     txt_cobro_observaciones = ft.TextField(label="Observaciones", multiline=True, min_lines=2, col={"md": 12, "xs": 12})
 
     def abrir_buscador_cliente_modal(e):
-        def cliente_seleccionado(clave, nombre, direccion):
-            txt_cobro_cliente.value = f"{nombre} ({clave})"
-            page.update()
-        search_dialogs.search_clients_dialog(page, cliente_seleccionado)
+        page.pop_dialog() # Cerrar el modal de cobro
+        page.overlay.append(ft.SnackBar(ft.Text("Selecciona el cliente desde la lista y luego vuelve al Carrito"), open=True, duration=3000))
+        ir_a_pestana(2) # 2 = Pestaña de Clientes
 
-    btn_buscar_cliente_modal = ft.IconButton(icon=ft.Icons.SEARCH, on_click=abrir_buscador_cliente_modal, col={"md": 2, "xs": 2})
+    btn_buscar_cliente_modal = ft.IconButton(icon=ft.Icons.SEARCH, tooltip="Buscar en Pestaña Clientes", on_click=abrir_buscador_cliente_modal, col={"md": 2, "xs": 2})
 
     dlg_cobro = ft.AlertDialog(
         modal=True,
@@ -320,11 +318,18 @@ def main(page: ft.Page):
             
             for r in rows:
                 c_clave, c_nom, c_rfc, c_dir = r['clave'], r['nombre'], r['rfc'] or '', r['direccion'] or ''
+                
+                def tap_client(e, c=c_clave, n=c_nom, d=c_dir):
+                    txt_cobro_cliente.value = f"{n} ({c})"
+                    page.overlay.append(ft.SnackBar(ft.Text(f"Cliente {n} seleccionado para la venta"), open=True, duration=2000))
+                    ir_a_pestana(1) # Ir a carrito
+                
                 lv_clientes_cat.controls.append(
                     ft.ListTile(
                         leading=ft.Icon(ft.Icons.PERSON, color=ft.Colors.BLUE_800),
                         title=ft.Text(f"{c_nom} ({c_clave})", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(f"RFC: {c_rfc} | Dirección: {c_dir}")
+                        subtitle=ft.Text(f"RFC: {c_rfc} | Dirección: {c_dir}"),
+                        on_click=tap_client
                     )
                 )
         except Exception as ex:
@@ -359,24 +364,31 @@ def main(page: ft.Page):
             conn = db_local.get_connection()
             cur = conn.cursor()
             if filtro:
-                cur.execute("SELECT clave, descripcion, precio, existencia FROM productos WHERE clave LIKE ? OR UPPER(descripcion) LIKE UPPER(?) LIMIT 50", (f"%{filtro}%", f"%{filtro}%"))
+                cur.execute("SELECT clave, descripcion, precio, existencia, cve_esqimpu FROM productos WHERE clave LIKE ? OR UPPER(descripcion) LIKE UPPER(?) LIMIT 50", (f"%{filtro}%", f"%{filtro}%"))
             else:
-                cur.execute("SELECT clave, descripcion, precio, existencia FROM productos LIMIT 50")
+                cur.execute("SELECT clave, descripcion, precio, existencia, cve_esqimpu FROM productos LIMIT 50")
             rows = cur.fetchall()
             conn.close()
             
             for r in rows:
+                # Si SQLite Row no tiene cve_esqimpu por ser BD vieja, fallará silenciosamente (lo atrapa el try)
                 p_cve, p_desc, p_prec, p_exis = r['clave'], r['descripcion'], float(r['precio'] or 0), float(r['existencia'] or 0)
-                def tap_add_product(e, c=p_cve, d=p_desc, p=p_prec):
-                    agregar_partida_directa(c, d, p)
+                p_esq = 1
+                if 'cve_esqimpu' in r.keys():
+                    p_esq = int(r['cve_esqimpu'] or 1)
+                    
+                def tap_add_product(e, c=p_cve, d=p_desc, p=p_prec, esq=p_esq):
+                    agregar_partida_directa(c, d, p, 1.0, esq)
+                    page.overlay.append(ft.SnackBar(ft.Text(f"Producto {d} agregado"), open=True, duration=1500))
                 
-                def long_press_product(e, c=p_cve, d=p_desc, p=p_prec):
+                def long_press_product(e, c=p_cve, d=p_desc, p=p_prec, esq=p_esq):
                     txt_qty_manual = ft.TextField(label="Cantidad", value="1", keyboard_type=ft.KeyboardType.NUMBER, autofocus=True)
                     def add_manual(ev):
                         try:
                             q = float(txt_qty_manual.value)
                             if q > 0:
-                                agregar_partida_directa(c, d, p, cantidad_agregar=q)
+                                agregar_partida_directa(c, d, p, cantidad_agregar=q, cve_esqimpu=esq)
+                                page.overlay.append(ft.SnackBar(ft.Text(f"{q} piezas de {d} agregadas"), open=True, duration=1500))
                             page.pop_dialog()
                         except:
                             pass
@@ -719,8 +731,8 @@ def main(page: ft.Page):
     # Cargar por defecto el catálogo
     cargar_tabla_productos()
 
-    def cambiar_pestana(e):
-        idx = e.control.selected_index
+    def ir_a_pestana(idx):
+        page.navigation_bar.selected_index = idx
         if idx == 0:
             body_container.content = view_productos
             cargar_tabla_productos()
@@ -735,6 +747,9 @@ def main(page: ft.Page):
             body_container.content = view_historial
             cargar_historial()
         page.update()
+
+    def cambiar_pestana(e):
+        ir_a_pestana(e.control.selected_index)
 
     page.navigation_bar = ft.NavigationBar(
         destinations=[
